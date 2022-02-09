@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, Copy)]
+use bevy::prelude::Component;
+
+#[derive(Debug, Clone, Copy, Component)]
 pub struct Position {
     pub x: f32,
     pub y: f32,

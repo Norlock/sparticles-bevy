@@ -127,7 +127,7 @@ fn setup(mut commands: Commands) {
             blue: 0.5,
             alpha: 1.,
         },
-        particles_per_emission: 10,
+        particles_per_emission: 8,
         delay_between_emission: Duration::from_millis(10),
         particle_lifetime: Duration::from_secs(3),
         particle_radius: 0.4,
@@ -137,6 +137,5 @@ fn setup(mut commands: Commands) {
         bounds: None,
     };
 
-    let emitter = Emitter::new(options);
-    commands.spawn().insert(emitter);
+    Emitter::create(options, &mut commands);
 }

@@ -4,12 +4,13 @@
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::force::force::ForceData;
 use crate::force::force_handler::ForceHandler;
+use bevy::core::FixedTimestep;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::LogDiagnosticsPlugin;
 //use crate::trails::trail_animation::TrailData;
 //use crate::trails::trail_handler::TrailHandler;
 use crate::{position, Position};
-use bevy::{prelude::*, transform};
+use bevy::prelude::*;
 use rand::prelude::ThreadRng;
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
@@ -44,7 +45,7 @@ pub struct EmitterOptions {
     //pub trail_handler: Option<TrailHandler>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub struct Bounds {
     start_x: f32,
     start_y: f32,
@@ -55,89 +56,139 @@ pub struct Bounds {
 }
 
 #[derive(Debug, Component)]
-pub struct Emitter {
-    emitter_diameter: f32,
-    position: Position,
-    bounds: Option<Bounds>,
-    angle_radians: f32,
-    angle_emission_radians: f32,
-    diffusion_radians: f32,
-    particle_color: Color,
-    //particle_texture: Option<Texture2D>,
-    particles_per_emission: u32,
-    delay_between_emission_ms: u128,
-    emission_distortion: f32,
-    current_emission: i32,
-    particle_lifetime_ms: u128,
-    particle_radius: f32,
-    particle_mass: f32,
-    particle_speed: f32,
-    particle_friction_coefficient: f32,
-    //trail_handler: Option<TrailHandler>,
-    particles: Vec<EmittedParticle>,
+pub struct Emitter;
+//{
+//position: Position,
+//particle_texture: Option<Texture2D>,
+//trail_handler: Option<TrailHandler>,
+//particle_animation_options: Option<AnimationOptions>,
+//force_handler: Option<ForceHandler>,
+//emitter_animation_handler: Option<EmitterAnimationHandler>,
+//pub particle_count: u32,
+//}
+
+#[derive(Debug, Component)]
+struct Cycle {
     lifetime: Instant,
-    emitter_duration: Duration,
-    //particle_animation_options: Option<AnimationOptions>,
-    //force_handler: Option<ForceHandler>,
-    //emitter_animation_handler: Option<EmitterAnimationHandler>,
-    pub delete: bool,
-    pub particle_count: u32,
+    duration: Duration,
 }
 
 #[derive(Debug, Component)]
-struct EmittedParticle {
-    position: Position,
+struct EmitOptions {
+    angle_radians: f32,
+    angle_emission_radians: f32,
+    diffusion_radians: f32,
+    particles_per_emission: u32,
+    emission_distortion: f32,
+    diameter: f32,
+}
+
+#[derive(Debug, Component)]
+struct ParticleOptions {
+    lifetime_ms: u128,
+    radius: f32,
+    mass: f32,
+    speed: f32,
+    friction_coefficient: f32,
+    color: Color,
+}
+
+#[derive(Debug, Component)]
+struct Particle;
+
+#[derive(Debug, Component)]
+struct Speed {
     vx: f32,
     vy: f32,
     vz: f32,
-    radius: f32,
-    //lifetime: Arc<Instant>,
-    color: Color,
-    //trail_handler: Option<TrailHandler>,
-    //animation_handler: Option<AnimationHandler>,
 }
+
+//lifetime: Arc<Instant>,
+//trail_handler: Option<TrailHandler>,
+//animation_handler: Option<AnimationHandler>,
 
 const EMIT_RADIANS: f32 = 90_f32 * (std::f32::consts::PI / 181.0f32); // 0 deg will be emitting above
-
-fn update_emitter_system(
-    mut query: Query<&mut Emitter>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    for mut emitter in query.iter_mut() {
-        emitter.emit(&mut commands, &mut meshes, &mut materials);
-        //println!("{:?}", emitter.particles.len());
-    }
-}
-
-fn transform_particle_system(mut query: Query<(&mut EmittedParticle, &mut Transform)>) {
-    //println!("{}", query.iter().len());
-    for (mut particle, mut transform) in query.iter_mut() {
-        let vx = particle.vx;
-        let vy = particle.vy;
-        let vz = particle.vz;
-
-        particle.position.update(vx, vy, vz);
-        transform.translation.x = particle.position.x;
-        transform.translation.y = particle.position.y;
-        transform.translation.z = particle.position.z;
-    }
-}
 
 pub struct EmitterPlugin;
 
 impl Plugin for EmitterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(update_emitter_system)
+        app
+            //.add_system_set(
+            //SystemSet::new()
+            //.with_run_criteria(FixedTimestep::step(0.5))
+            //.with_system(update_emitter_system),
+            //)
             .add_plugin(LogDiagnosticsPlugin::default())
             .add_plugin(FrameTimeDiagnosticsPlugin::default())
-            .add_system(transform_particle_system);
+            .add_system(transform_particle_system)
+            .add_system(update_emitter_system);
+    }
+}
+
+fn transform_particle_system(mut query: Query<(&Speed, &mut Transform), With<Particle>>) {
+    //println!("{}", query.iter().count());
+    for (speed, mut transform) in query.iter_mut() {
+        transform.translation.x += speed.vx;
+        transform.translation.y += speed.vy;
+        transform.translation.z += speed.vz;
+    }
+}
+
+fn update_emitter_system(
+    mut query: Query<(&Cycle, &EmitOptions, &ParticleOptions, &Position), With<Emitter>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for (cycle, emit_options, particle, position) in query.iter_mut() {
+        let elapsed = cycle.lifetime.elapsed();
+        let overdue = elapsed > cycle.duration;
+
+        if overdue {
+            return;
+        }
+
+        let mut rng = thread_rng();
+        //let lifetime = Arc::new(Instant::now());
+        for _ in 0..emit_options.particles_per_emission {
+            let emitter_position = gen_abs_range(&mut rng, emit_options.diameter);
+            let distortion = gen_dyn_range(&mut rng, emit_options.emission_distortion);
+            let x = (position.x + distortion) + emitter_position * emit_options.angle_radians.cos();
+            let y = (position.y + distortion) + emitter_position * emit_options.angle_radians.sin();
+            let z = 0.;
+
+            let diffusion_delta = gen_dyn_range(&mut rng, emit_options.diffusion_radians);
+            let angle_radians = emit_options.angle_emission_radians + diffusion_delta;
+            let vx = particle.speed * angle_radians.cos();
+            let vy = particle.speed * angle_radians.sin();
+
+            //let animation_handler = AnimationHandler::new(&self.particle_animation_options);
+
+            let speed = Speed { vx, vy, vz: 0. };
+
+            commands
+                .spawn_bundle(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Icosphere {
+                        radius: particle.radius,
+                        ..Default::default()
+                    })),
+                    material: materials.add(particle.color.into()),
+                    transform: Transform {
+                        translation: Vec3::new(x, y, z),
+                        //scale: Vec3::new(0.1, 0.1, 0.1),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .insert(speed)
+                .insert(Particle);
+        }
     }
 }
 
 impl Emitter {
-    pub fn new(options: EmitterOptions) -> Self {
+    pub fn create(options: EmitterOptions, commands: &mut Commands) {
         let EmitterOptions {
             emitter_position,
             emitter_diameter,
@@ -161,31 +212,62 @@ impl Emitter {
         let angle_radians = angle_degrees.to_radians();
         let angle_emission_radians = angle_radians + EMIT_RADIANS;
 
-        Self {
+        let emit_options = EmitOptions {
             particles_per_emission,
-            particles: Vec::new(),
-            particle_color,
             diffusion_radians: diffusion_degrees.to_radians(),
-            particle_mass,
-            particle_radius,
-            position: emitter_position,
             angle_radians,
             angle_emission_radians,
             emission_distortion,
-            particle_lifetime_ms: particle_lifetime.as_millis(),
-            particle_count: 0,
-            emitter_diameter,
-            emitter_duration,
+            diameter: emitter_diameter,
+        };
+
+        let emit_time = Cycle {
+            duration: emitter_duration,
             lifetime: Instant::now(),
-            current_emission: -1,
-            delay_between_emission_ms: delay_between_emission.as_millis(),
-            bounds,
-            particle_friction_coefficient,
-            particle_speed,
-            //emitter_animation_handler,
-            //force_handler,
-            delete: false,
+        };
+
+        let spawn_options = ParticleOptions {
+            speed: particle_speed,
+            color: particle_color,
+            friction_coefficient: particle_friction_coefficient,
+            radius: particle_radius,
+            lifetime_ms: particle_lifetime.as_millis(),
+            mass: particle_mass,
+        };
+
+        let mut builder = commands.spawn();
+        builder
+            .insert(emit_options)
+            .insert(emit_time)
+            .insert(emitter_position)
+            .insert(spawn_options)
+            .insert(Emitter);
+
+        if let Some(bounds) = bounds {
+            builder.insert(bounds);
         }
+        //Self {
+        //particles_per_emission,
+        //particle_color,
+        //particle_mass,
+        //particle_radius,
+        //position: emitter_position,
+        //angle_radians,
+        //angle_emission_radians,
+        //emission_distortion,
+        //particle_lifetime_ms: particle_lifetime.as_millis(),
+        //emitter_diameter,
+        //emitter_duration: duration,
+        //lifetime: Instant::now(),
+        //current_emission: -1,
+        //delay_between_emission_ms: delay_between_emission.as_millis(),
+        //bounds,
+        //particle_friction_coefficient,
+        //particle_speed,
+        ////emitter_animation_handler,
+        ////force_handler,
+        //delete: false,
+        //}
     }
 
     fn animate_emitter(&mut self, elapsed_ms: u128) {
@@ -218,176 +300,163 @@ impl Emitter {
         //}
     }
 
-    pub fn emit(
-        &mut self,
-        commands: &mut Commands,
-        meshes: &mut ResMut<Assets<Mesh>>,
-        materials: &mut ResMut<Assets<StandardMaterial>>,
-    ) {
-        let elapsed = self.lifetime.elapsed();
-        let overdue = elapsed > self.emitter_duration;
-        let emitter_elapsed_ms = elapsed.as_millis();
-        let new_emission = (emitter_elapsed_ms / self.delay_between_emission_ms) as i32;
-        let mut rng = thread_rng();
+    //pub fn emit(
+    //&mut self,
+    //commands: &mut Commands,
+    //meshes: &mut ResMut<Assets<Mesh>>,
+    //materials: &mut ResMut<Assets<StandardMaterial>>,
+    //) {
+    //let elapsed = self.lifetime.elapsed();
+    //let overdue = elapsed > self.emitter_duration;
+    //let emitter_elapsed_ms = elapsed.as_millis();
+    //let new_emission = (emitter_elapsed_ms / self.delay_between_emission_ms) as i32;
 
-        if !overdue && self.current_emission < new_emission {
-            self.current_emission = new_emission;
-            //let lifetime = Arc::new(Instant::now());
-            for _ in 0..self.particles_per_emission {
-                let particle = self.create_particle(&mut rng);
-                //println!("{} {}", particle.x, particle.y);
-                let position = &particle.position;
-                commands
-                    .spawn_bundle(PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Icosphere {
-                            radius: particle.radius,
-                            ..Default::default()
-                        })),
-                        material: materials.add(particle.color.into()),
-                        transform: Transform {
-                            translation: Vec3::new(position.x, position.y, position.z),
-                            //scale: Vec3::new(0.1, 0.1, 0.1),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    })
-                    .insert(particle);
+    //if overdue || new_emission <= self.current_emission {
+    //return;
+    //}
 
-                //self.particles.push(particle);
-            }
-        }
+    //self.current_emission = new_emission;
+    //let mut rng = thread_rng();
+    ////let lifetime = Arc::new(Instant::now());
+    //for _ in 0..self.particles_per_emission {
+    //let emitter_position = gen_abs_range(&mut rng, self.emitter_diameter);
+    //let distortion = gen_dyn_range(&mut rng, self.emission_distortion);
+    //let x = (self.position.x + distortion) + emitter_position * self.angle_radians.cos();
+    //let y = (self.position.y + distortion) + emitter_position * self.angle_radians.sin();
+    //let z = 0.;
 
-        //self.animate_emitter(emitter_elapsed_ms);
-        //self.update_particles(emitter_elapsed_ms);
+    //let diffusion_delta = gen_dyn_range(&mut rng, self.diffusion_radians);
+    //let angle_radians = self.angle_emission_radians + diffusion_delta;
+    //let vx = self.particle_speed * angle_radians.cos();
+    //let vy = self.particle_speed * angle_radians.sin();
 
-        //if self.particles.is_empty() && overdue {
-        //self.delete = true;
-        //}
+    ////let animation_handler = AnimationHandler::new(&self.particle_animation_options);
 
-        //self.particle_count = self.particles.len() as u32;
-    }
+    //let speed = Speed { vx, vy, vz: 0. };
 
-    fn update_particles(&mut self, emitter_elapsed_ms: u128) {
-        for i in (0..self.particles.len()).rev() {
-            let mut particle = self.particles.swap_remove(i);
+    //commands
+    //.spawn_bundle(PbrBundle {
+    //mesh: meshes.add(Mesh::from(shape::Icosphere {
+    //radius: self.particle_radius,
+    //..Default::default()
+    //})),
+    //material: materials.add(self.particle_color.into()),
+    //transform: Transform {
+    //translation: Vec3::new(x, y, z),
+    ////scale: Vec3::new(0.1, 0.1, 0.1),
+    //..Default::default()
+    //},
+    //..Default::default()
+    //})
+    //.insert(speed)
+    //.insert(Particle);
 
-            let x_force = particle.vx * self.particle_mass;
-            let y_force = particle.vy * self.particle_mass;
+    ////self.particles.push(particle);
+    //}
 
-            let x_friction = x_force * self.particle_friction_coefficient;
-            let y_friction = y_force * self.particle_friction_coefficient;
+    ////self.animate_emitter(emitter_elapsed_ms);
+    ////self.update_particles(emitter_elapsed_ms);
 
-            let vx = (x_force - x_friction) / self.particle_mass;
-            let vy = (y_force - y_friction) / self.particle_mass;
+    ////if self.particles.is_empty() && overdue {
+    ////self.delete = true;
+    ////}
 
-            //if let Some(force_handler) = &mut self.force_handler {
-            //let mut data = ForceData {
-            //x: particle.x,
-            //y: particle.y,
-            //vx,
-            //vy,
-            //radius: self.particle_radius,
-            //mass: self.particle_mass,
-            //};
+    ////self.particle_count = self.particles.len() as u32;
+    //}
 
-            //force_handler.apply(&mut data, emitter_elapsed_ms);
+    //fn update_particles(&mut self, emitter_elapsed_ms: u128) {
+    //for i in (0..self.particles.len()).rev() {
+    //let mut particle = self.particles.swap_remove(i);
 
-            //particle.vx = data.vx;
-            //particle.vy = data.vy;
-            //} else {
-            particle.vx = vx;
-            particle.vy = vy;
-            //}
+    //let x_force = particle.vx * self.particle_mass;
+    //let y_force = particle.vy * self.particle_mass;
 
-            //let particle_elapsed_ms = particle.lifetime.elapsed().as_millis();
+    //let x_friction = x_force * self.particle_friction_coefficient;
+    //let y_friction = y_force * self.particle_friction_coefficient;
 
-            //if let Some(animation_handler) = &mut particle.animation_handler {
-            //let mut data: AnimationData = AnimationData {
-            //radius: particle.radius,
-            //color: particle.color,
-            //vx: particle.vx,
-            //vy: particle.vy,
-            //};
+    //let vx = (x_force - x_friction) / self.particle_mass;
+    //let vy = (y_force - y_friction) / self.particle_mass;
 
-            //animation_handler.animate(&mut data, particle_elapsed_ms);
-            //particle.vx = data.vx;
-            //particle.vy = data.vy;
-            //particle.color = data.color;
-            //particle.radius = data.radius;
-            //}
+    ////if let Some(force_handler) = &mut self.force_handler {
+    ////let mut data = ForceData {
+    ////x: particle.x,
+    ////y: particle.y,
+    ////vx,
+    ////vy,
+    ////radius: self.particle_radius,
+    ////mass: self.particle_mass,
+    ////};
 
-            particle.position.x += particle.vx;
-            particle.position.y += particle.vy;
-            particle.position.z += particle.vz;
+    ////force_handler.apply(&mut data, emitter_elapsed_ms);
 
-            //if let Some(trail_handler) = &mut particle.trail_handler {
-            //let data = TrailData {
-            //radius: particle.radius,
-            //color: particle.color,
-            //x_abs: x,
-            //y_abs: y,
-            //};
+    ////particle.vx = data.vx;
+    ////particle.vy = data.vy;
+    ////} else {
+    //particle.vx = vx;
+    //particle.vy = vy;
+    ////}
 
-            //trail_handler.animate(&data, particle_elapsed_ms);
-            //}
+    ////let particle_elapsed_ms = particle.lifetime.elapsed().as_millis();
 
-            //if let Some(texture) = self.particle_texture {
-            //let side = particle.radius * 2.;
-            //let dest_size = Some(Vec2::new(side, side));
+    ////if let Some(animation_handler) = &mut particle.animation_handler {
+    ////let mut data: AnimationData = AnimationData {
+    ////radius: particle.radius,
+    ////color: particle.color,
+    ////vx: particle.vx,
+    ////vy: particle.vy,
+    ////};
 
-            //let params = DrawTextureParams {
-            //dest_size,
-            //..Default::default()
-            //};
-            //} else {
-            //}
+    ////animation_handler.animate(&mut data, particle_elapsed_ms);
+    ////particle.vx = data.vx;
+    ////particle.vy = data.vy;
+    ////particle.color = data.color;
+    ////particle.radius = data.radius;
+    ////}
 
-            let diameter = particle.radius * 2.;
+    ////particle.position.x += particle.vx;
+    ////particle.position.y += particle.vy;
+    ////particle.position.z += particle.vz;
 
-            //if let Some(bounds) = &self.bounds {
-            //let position = &mut particle.position;
-            //if position.x < bounds.start_x
-            //|| bounds.end_x < position.x + diameter
-            //|| position.y < bounds.start_y
-            //|| bounds.end_y < position.y + diameter
-            //|| position.z < bounds.start_z
-            //|| bounds.end_z < position.z + diameter
-            //{
-            //continue; // removes particle.
-            //}
-            //} else if particle_elapsed_ms <= self.particle_lifetime_ms {
-            //self.particles.push(particle);
-            //}
-        }
-    }
+    ////if let Some(trail_handler) = &mut particle.trail_handler {
+    ////let data = TrailData {
+    ////radius: particle.radius,
+    ////color: particle.color,
+    ////x_abs: x,
+    ////y_abs: y,
+    ////};
 
-    fn create_particle(&self, rng: &mut ThreadRng) -> EmittedParticle {
-        let emitter_position = gen_abs_range(rng, self.emitter_diameter);
-        let distortion = gen_dyn_range(rng, self.emission_distortion);
-        let x = (self.position.x + distortion) + emitter_position * self.angle_radians.cos();
-        let y = (self.position.y + distortion) + emitter_position * self.angle_radians.sin();
-        let z = 0.;
+    ////trail_handler.animate(&data, particle_elapsed_ms);
+    ////}
 
-        let position = Position::new(x, y, z);
+    ////if let Some(texture) = self.particle_texture {
+    ////let side = particle.radius * 2.;
+    ////let dest_size = Some(Vec2::new(side, side));
 
-        let diffusion_delta = gen_dyn_range(rng, self.diffusion_radians);
-        let angle_radians = self.angle_emission_radians + diffusion_delta;
-        let vx = self.particle_speed * angle_radians.cos();
-        let vy = self.particle_speed * angle_radians.sin();
+    ////let params = DrawTextureParams {
+    ////dest_size,
+    ////..Default::default()
+    ////};
+    ////} else {
+    ////}
 
-        //let animation_handler = AnimationHandler::new(&self.particle_animation_options);
+    ////let diameter = particle.radius * 2.;
 
-        EmittedParticle {
-            position,
-            vx,
-            vy,
-            vz: 0.,
-            radius: self.particle_radius,
-            color: self.particle_color,
-            //trail_handler: self.trail_handler.clone(),
-            //animation_handler,
-        }
-    }
+    ////if let Some(bounds) = &self.bounds {
+    ////let position = &mut particle.position;
+    ////if position.x < bounds.start_x
+    ////|| bounds.end_x < position.x + diameter
+    ////|| position.y < bounds.start_y
+    ////|| bounds.end_y < position.y + diameter
+    ////|| position.z < bounds.start_z
+    ////|| bounds.end_z < position.z + diameter
+    ////{
+    ////continue; // removes particle.
+    ////}
+    ////} else if particle_elapsed_ms <= self.particle_lifetime_ms {
+    ////self.particles.push(particle);
+    ////}
+    //}
+    //}
 }
 
 fn gen_dyn_range(rng: &mut ThreadRng, val: f32) -> f32 {
