@@ -91,13 +91,13 @@ struct EmittedParticle {
     vy: f32,
     vz: f32,
     radius: f32,
-    lifetime: Arc<Instant>,
+    //lifetime: Arc<Instant>,
     color: Color,
     //trail_handler: Option<TrailHandler>,
     //animation_handler: Option<AnimationHandler>,
 }
 
-const INVERSE_RADIANS: f32 = -90_f32 * (std::f32::consts::PI / 181.0f32); // 0 deg will be emitting above
+const EMIT_RADIANS: f32 = 90_f32 * (std::f32::consts::PI / 181.0f32); // 0 deg will be emitting above
 
 fn update_emitter_system(
     mut query: Query<&mut Emitter>,
@@ -112,6 +112,7 @@ fn update_emitter_system(
 }
 
 fn transform_particle_system(mut query: Query<(&mut EmittedParticle, &mut Transform)>) {
+    //println!("{}", query.iter().len());
     for (mut particle, mut transform) in query.iter_mut() {
         let vx = particle.vx;
         let vy = particle.vy;
@@ -121,7 +122,6 @@ fn transform_particle_system(mut query: Query<(&mut EmittedParticle, &mut Transf
         transform.translation.x = particle.position.x;
         transform.translation.y = particle.position.y;
         transform.translation.z = particle.position.z;
-        //println!("{:?}", particle.position);
     }
 }
 
@@ -159,7 +159,7 @@ impl Emitter {
         } = options;
 
         let angle_radians = angle_degrees.to_radians();
-        let angle_emission_radians = angle_radians + INVERSE_RADIANS;
+        let angle_emission_radians = angle_radians + EMIT_RADIANS;
 
         Self {
             particles_per_emission,
@@ -228,12 +228,13 @@ impl Emitter {
         let overdue = elapsed > self.emitter_duration;
         let emitter_elapsed_ms = elapsed.as_millis();
         let new_emission = (emitter_elapsed_ms / self.delay_between_emission_ms) as i32;
+        let mut rng = thread_rng();
 
         if !overdue && self.current_emission < new_emission {
             self.current_emission = new_emission;
-            let lifetime = Arc::new(Instant::now());
+            //let lifetime = Arc::new(Instant::now());
             for _ in 0..self.particles_per_emission {
-                let particle = self.create_particle(Arc::clone(&lifetime));
+                let particle = self.create_particle(&mut rng);
                 //println!("{} {}", particle.x, particle.y);
                 let position = &particle.position;
                 commands
@@ -245,7 +246,7 @@ impl Emitter {
                         material: materials.add(particle.color.into()),
                         transform: Transform {
                             translation: Vec3::new(position.x, position.y, position.z),
-                            scale: Vec3::new(0.1, 0.1, 0.1),
+                            //scale: Vec3::new(0.1, 0.1, 0.1),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -256,14 +257,14 @@ impl Emitter {
             }
         }
 
-        self.animate_emitter(emitter_elapsed_ms);
-        self.update_particles(emitter_elapsed_ms);
+        //self.animate_emitter(emitter_elapsed_ms);
+        //self.update_particles(emitter_elapsed_ms);
 
-        if self.particles.is_empty() && overdue {
-            self.delete = true;
-        }
+        //if self.particles.is_empty() && overdue {
+        //self.delete = true;
+        //}
 
-        self.particle_count = self.particles.len() as u32;
+        //self.particle_count = self.particles.len() as u32;
     }
 
     fn update_particles(&mut self, emitter_elapsed_ms: u128) {
@@ -298,7 +299,7 @@ impl Emitter {
             particle.vy = vy;
             //}
 
-            let particle_elapsed_ms = particle.lifetime.elapsed().as_millis();
+            //let particle_elapsed_ms = particle.lifetime.elapsed().as_millis();
 
             //if let Some(animation_handler) = &mut particle.animation_handler {
             //let mut data: AnimationData = AnimationData {
@@ -343,34 +344,33 @@ impl Emitter {
 
             let diameter = particle.radius * 2.;
 
-            if let Some(bounds) = &self.bounds {
-                let position = &mut particle.position;
-                if position.x < bounds.start_x
-                    || bounds.end_x < position.x + diameter
-                    || position.y < bounds.start_y
-                    || bounds.end_y < position.y + diameter
-                    || position.z < bounds.start_z
-                    || bounds.end_z < position.z + diameter
-                {
-                    continue; // removes particle.
-                }
-            } else if particle_elapsed_ms <= self.particle_lifetime_ms {
-                self.particles.push(particle);
-            }
+            //if let Some(bounds) = &self.bounds {
+            //let position = &mut particle.position;
+            //if position.x < bounds.start_x
+            //|| bounds.end_x < position.x + diameter
+            //|| position.y < bounds.start_y
+            //|| bounds.end_y < position.y + diameter
+            //|| position.z < bounds.start_z
+            //|| bounds.end_z < position.z + diameter
+            //{
+            //continue; // removes particle.
+            //}
+            //} else if particle_elapsed_ms <= self.particle_lifetime_ms {
+            //self.particles.push(particle);
+            //}
         }
     }
 
-    fn create_particle(&self, lifetime: Arc<Instant>) -> EmittedParticle {
-        let mut rng = thread_rng();
-        let emitter_position = gen_abs_range(&mut rng, self.emitter_diameter);
-        let distortion = gen_dyn_range(&mut rng, self.emission_distortion);
+    fn create_particle(&self, rng: &mut ThreadRng) -> EmittedParticle {
+        let emitter_position = gen_abs_range(rng, self.emitter_diameter);
+        let distortion = gen_dyn_range(rng, self.emission_distortion);
         let x = (self.position.x + distortion) + emitter_position * self.angle_radians.cos();
         let y = (self.position.y + distortion) + emitter_position * self.angle_radians.sin();
         let z = 0.;
 
         let position = Position::new(x, y, z);
 
-        let diffusion_delta = gen_dyn_range(&mut rng, self.diffusion_radians);
+        let diffusion_delta = gen_dyn_range(rng, self.diffusion_radians);
         let angle_radians = self.angle_emission_radians + diffusion_delta;
         let vx = self.particle_speed * angle_radians.cos();
         let vy = self.particle_speed * angle_radians.sin();
@@ -382,7 +382,6 @@ impl Emitter {
             vx,
             vy,
             vz: 0.,
-            lifetime,
             radius: self.particle_radius,
             color: self.particle_color,
             //trail_handler: self.trail_handler.clone(),

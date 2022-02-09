@@ -116,7 +116,7 @@ fn setup(mut commands: Commands) {
     let emitter_position = Position::new(10., 0., 0.);
     let options = EmitterOptions {
         emitter_position,
-        emitter_diameter: 120.,
+        emitter_diameter: 12.,
         emitter_duration: Duration::from_secs(10),
         angle_degrees: 10.,
         diffusion_degrees: 60.,
@@ -130,7 +130,7 @@ fn setup(mut commands: Commands) {
         particles_per_emission: 10,
         delay_between_emission: Duration::from_millis(10),
         particle_lifetime: Duration::from_secs(3),
-        particle_radius: 5.,
+        particle_radius: 0.4,
         particle_mass: 1.,
         particle_speed: 0.1,
         particle_friction_coefficient: 0.001,
