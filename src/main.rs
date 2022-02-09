@@ -1,18 +1,22 @@
 #![allow(dead_code)]
 
+use std::time::Duration;
+
+use crate::position::Position;
 use bevy::prelude::*;
+use emitters::emitter::{Emitter, EmitterOptions, EmitterPlugin};
 //mod animations;
-//mod collision;
+mod collision;
 //mod container;
-//mod emitters;
+mod emitters;
 //mod fill_style;
-//mod force;
-//mod grid;
+mod force;
+mod grid;
 //mod movement_handler;
-//mod particle;
+mod particle;
 //mod pattern;
-//mod point;
-//mod position;
+mod point;
+mod position;
 //mod swarm_emitter;
 //mod trails;
 
@@ -80,9 +84,59 @@ fn main() {
     //grid.add_emitter(another_emitter());
 
     //let color = Color::from_rgba(0, 26, 51, 255);
-    App::new().run();
+    App::new()
+        .add_startup_system(setup)
+        .insert_resource(ClearColor(Color::rgb(0., 0., 0.)))
+        .add_plugins(DefaultPlugins)
+        .add_plugin(EmitterPlugin)
+        .run();
 }
 
-fn hello_world() {
-    println!("hello world!");
+fn setup(mut commands: Commands) {
+    //let grid = Grid::new(GridOptions {
+    //cell_x_count: 10,
+    //cell_y_count: 10,
+    //cell_z_count: 1,
+    //possibility_x_count: 10,
+    //possibility_y_count: 10,
+    //possibility_z_count: 10,
+    //possibility_side_length: 10,
+    //position,
+    ////force_handler: random_forces(),
+    //});
+
+    commands.spawn_bundle(PerspectiveCameraBundle {
+        transform: Transform::from_xyz(50., 0., 200.),
+        ..Default::default()
+    });
+
+    //commands.insert_resource(grid);
+    commands.spawn_bundle(UiCameraBundle::default());
+
+    let emitter_position = Position::new(10., 0., 0.);
+    let options = EmitterOptions {
+        emitter_position,
+        emitter_diameter: 120.,
+        emitter_duration: Duration::from_secs(10),
+        angle_degrees: 10.,
+        diffusion_degrees: 60.,
+        emission_distortion: 0.,
+        particle_color: Color::Rgba {
+            red: 0.5,
+            green: 1.0,
+            blue: 0.5,
+            alpha: 1.,
+        },
+        particles_per_emission: 10,
+        delay_between_emission: Duration::from_millis(10),
+        particle_lifetime: Duration::from_secs(3),
+        particle_radius: 5.,
+        particle_mass: 1.,
+        particle_speed: 0.1,
+        particle_friction_coefficient: 0.001,
+        bounds: None,
+    };
+
+    let emitter = Emitter::new(options);
+    commands.spawn().insert(emitter);
 }

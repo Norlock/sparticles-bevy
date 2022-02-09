@@ -1,5 +1,5 @@
 use super::emitter_animation::EmitterData;
-use macroquad::prelude::Color;
+use bevy::prelude::Color;
 
 use super::emitter_animation::EmitterAnimate;
 
@@ -21,13 +21,13 @@ impl EmitterAnimate for EmitColorAnimation {
 
         // calculate percent from 0..1
         let fraction = delta_current as f32 / delta_max as f32;
-        data.particle_color.r =
-            self.from_color.r + fraction * (self.to_color.r - self.from_color.r);
-        data.particle_color.g =
-            self.from_color.g + fraction * (self.to_color.g - self.from_color.g);
-        data.particle_color.b =
-            self.from_color.b + fraction * (self.to_color.b - self.from_color.b);
-        data.particle_color.a =
-            self.from_color.a + fraction * (self.to_color.a - self.from_color.a);
+        let r = self.from_color.r() + fraction * (self.to_color.r() - self.from_color.r());
+        let g = self.from_color.g() + fraction * (self.to_color.g() - self.from_color.g());
+        let b = self.from_color.b() + fraction * (self.to_color.b() - self.from_color.b());
+        let a = self.from_color.a() + fraction * (self.to_color.a() - self.from_color.a());
+        data.particle_color.set_r(r);
+        data.particle_color.set_g(g);
+        data.particle_color.set_b(b);
+        data.particle_color.set_a(a);
     }
 }

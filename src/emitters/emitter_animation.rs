@@ -1,4 +1,4 @@
-use macroquad::prelude::Color;
+use bevy::prelude::Color;
 use std::fmt::Debug;
 
 pub trait EmitterAnimate {

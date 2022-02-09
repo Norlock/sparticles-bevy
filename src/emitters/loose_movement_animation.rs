@@ -1,6 +1,6 @@
 use super::emitter_animation::EmitterAnimate;
 use crate::emitters::emitter_animation::EmitterData;
-use macroquad::prelude::rand;
+use rand::{thread_rng, Rng};
 
 pub struct LooseMovementAnimation {
     pub from_ms: u32,
@@ -16,7 +16,7 @@ impl EmitterAnimate for LooseMovementAnimation {
             return;
         }
 
-        let stray = rand::gen_range(-self.stray_radians, self.stray_radians);
+        let stray = thread_rng().gen_range(-self.stray_radians..self.stray_radians);
         self.vx = (self.vx * stray.cos()) - (self.vy * stray.sin());
         self.vy = (self.vx * stray.sin()) + (self.vy * stray.cos());
 

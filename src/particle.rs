@@ -1,11 +1,6 @@
-use crate::animations::animation::AnimationData;
-use crate::animations::animation_handler::AnimationHandler;
-use crate::animations::animation_handler::AnimationOptions;
 use crate::collision::CollisionData;
-use crate::trails::trail_animation::TrailData;
-use crate::trails::trail_handler::TrailHandler;
-use macroquad::prelude::*;
-use std::rc::Rc;
+use bevy::render::color::Color;
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::position::Position;
@@ -20,15 +15,15 @@ pub struct Particle {
     pub radius: f32,
     pub diameter: f32,
     pub color: Color,
-    texture: Option<Texture2D>,
+    //texture: Option<Texture2D>,
     pub mass: f32,
     /// number between 0 and 1.
     pub elasticity: f32,
     /// number between 0 and 1. E.g. 0.008
     pub friction_coefficient: f32,
-    pub lifetime: Rc<Instant>,
-    pub animation_handler: Option<AnimationHandler>,
-    pub trail_handler: Option<TrailHandler>,
+    pub lifetime: Arc<Instant>,
+    //pub animation_handler: Option<AnimationHandler>,
+    //pub trail_handler: Option<TrailHandler>,
 }
 
 pub struct ParticleAttributes {
@@ -38,16 +33,16 @@ pub struct ParticleAttributes {
     pub friction_coefficient: f32,
 
     pub color: Color,
-    pub texture: Option<Texture2D>,
+    //pub texture: Option<Texture2D>,
     pub mass: f32,
     pub diameter: f32,
-    pub animation_options: Option<AnimationOptions>,
-    pub trail_handler: Option<TrailHandler>,
+    //pub animation_options: Option<AnimationOptions>,
+    //pub trail_handler: Option<TrailHandler>,
 }
 
 impl Particle {
-    pub fn new(x: f32, y: f32, attributes: &ParticleAttributes, lifetime: Rc<Instant>) -> Self {
-        let animation_handler = AnimationHandler::new(&attributes.animation_options);
+    pub fn new(x: f32, y: f32, attributes: &ParticleAttributes, lifetime: Arc<Instant>) -> Self {
+        //let animation_handler = AnimationHandler::new(&attributes.animation_options);
 
         Self {
             x,
@@ -56,15 +51,15 @@ impl Particle {
             vy: 0.,
             friction_coefficient: attributes.friction_coefficient,
             color: attributes.color,
-            texture: attributes.texture,
+            //texture: attributes.texture,
             radius: attributes.diameter / 2.,
             diameter: attributes.diameter,
             elasticity: attributes.elasticity,
             mass: attributes.mass,
             queue_frame: u64::MAX,
             lifetime,
-            trail_handler: attributes.trail_handler.clone(),
-            animation_handler,
+            //trail_handler: attributes.trail_handler.clone(),
+            //animation_handler,
         }
     }
 
@@ -187,53 +182,53 @@ impl Particle {
     }
 
     pub fn animate(&mut self) {
-        if let Some(animator) = &mut self.animation_handler {
-            let mut data = AnimationData {
-                color: self.color,
-                radius: self.radius,
-                vx: self.vx,
-                vy: self.vy,
-            };
+        //if let Some(animator) = &mut self.animation_handler {
+        //let mut data = AnimationData {
+        //color: self.color,
+        //radius: self.radius,
+        //vx: self.vx,
+        //vy: self.vy,
+        //};
 
-            let elapsed_ms = self.lifetime.elapsed().as_millis();
-            animator.animate(&mut data, elapsed_ms);
+        //let elapsed_ms = self.lifetime.elapsed().as_millis();
+        //animator.animate(&mut data, elapsed_ms);
 
-            self.color = data.color;
-            self.radius = data.radius;
-            self.diameter = data.radius * 2.;
-        }
+        //self.color = data.color;
+        //self.radius = data.radius;
+        //self.diameter = data.radius * 2.;
+        //}
     }
 
     pub fn draw(&mut self, grid_position: &Position) {
         let x = self.x + grid_position.x;
         let y = self.y + grid_position.y;
 
-        if let Some(trail_handler) = &mut self.trail_handler {
-            let elapsed_ms = self.lifetime.elapsed().as_millis();
+        //if let Some(trail_handler) = &mut self.trail_handler {
+        //let elapsed_ms = self.lifetime.elapsed().as_millis();
 
-            let data = TrailData {
-                radius: self.radius,
-                color: self.color,
-                x_abs: x,
-                y_abs: y,
-            };
+        //let data = TrailData {
+        //radius: self.radius,
+        //color: self.color,
+        //x_abs: x,
+        //y_abs: y,
+        //};
 
-            trail_handler.animate(&data, elapsed_ms);
-        }
+        //trail_handler.animate(&data, elapsed_ms);
+        //}
 
-        if let Some(texture) = self.texture {
-            let side = self.diameter;
-            let dest_size = Some(Vec2::new(side, side));
+        //if let Some(texture) = self.texture {
+        //let side = self.diameter;
+        //let dest_size = Some(Vec2::new(side, side));
 
-            let params = DrawTextureParams {
-                dest_size,
-                ..Default::default()
-            };
+        //let params = DrawTextureParams {
+        //dest_size,
+        //..Default::default()
+        //};
 
-            draw_texture_ex(texture, x, y, self.color, params);
-        } else {
-            draw_circle(x, y, self.radius, self.color);
-        }
+        //draw_texture_ex(texture, x, y, self.color, params);
+        //} else {
+        //draw_circle(x, y, self.radius, self.color);
+        //}
     }
 
     pub fn apply_friction(&mut self) {
