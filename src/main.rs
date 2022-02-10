@@ -1,9 +1,14 @@
 #![allow(dead_code)]
 
+use crate::emitters::emitter::EmitterSize;
+use crate::point::{Degrees, Point};
+use bevy_config_cam::MovementSettings;
+use bevy_config_cam::PlayerSettings;
 use std::time::Duration;
 
 use crate::position::Position;
 use bevy::prelude::*;
+use bevy_config_cam::ConfigCam;
 use emitters::emitter::{Emitter, EmitterOptions, EmitterPlugin};
 //mod animations;
 mod collision;
@@ -88,11 +93,27 @@ fn main() {
         .add_startup_system(setup)
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.)))
         .add_plugins(DefaultPlugins)
+        //.add_plugin(ConfigCam)
+        //.insert_resource(MovementSettings {
+        //sensitivity: 0.00015, // default: 0.00012
+        //speed: 50.0,          // default: 12.0
+        //dist: 50.0,           // Camera distance from the player in topdown view
+        //..Default::default()
+        //})
+        //.insert_resource(PlayerSettings {
+        //pos: Vec3::new(0., 100., 0.), //Initial position of the player
+        ////player_asset: "models/craft_speederA.glb#Scene0", //Model of the player, default is a red cube
+        //..Default::default()
+        //})
         .add_plugin(EmitterPlugin)
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
+) {
     //let grid = Grid::new(GridOptions {
     //cell_x_count: 10,
     //cell_y_count: 10,
@@ -106,20 +127,23 @@ fn setup(mut commands: Commands) {
     //});
 
     commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(50., 0., 200.),
+        transform: Transform::from_xyz(0., 10., 100.),
         ..Default::default()
     });
 
     //commands.insert_resource(grid);
     commands.spawn_bundle(UiCameraBundle::default());
 
-    let emitter_position = Position::new(10., 0., 0.);
+    let emitter_position = Position::new(0., 0., 0.);
     let options = EmitterOptions {
         emitter_position,
-        emitter_diameter: 12.,
+        emitter_size: EmitterSize {
+            length: 8.,
+            depth: 8.,
+        },
         emitter_duration: Duration::from_secs(10),
-        angle_degrees: 10.,
-        diffusion_degrees: 60.,
+        angle_degrees: Point(10., 10.),
+        diffusion_degrees: Point(60., 10.),
         emission_distortion: 0.,
         particle_color: Color::Rgba {
             red: 0.5,
@@ -127,15 +151,15 @@ fn setup(mut commands: Commands) {
             blue: 0.5,
             alpha: 1.,
         },
-        particles_per_emission: 8,
-        delay_between_emission: Duration::from_millis(10),
-        particle_lifetime: Duration::from_secs(3),
+        particles_per_emission: 10,
+        delay_between_emission_ms: 100,
+        particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.4,
         particle_mass: 1.,
-        particle_speed: 0.1,
-        particle_friction_coefficient: 0.001,
+        particle_speed: 0.3,
+        particle_friction_coefficient: 0.01,
         bounds: None,
     };
 
-    Emitter::create(options, &mut commands);
+    Emitter::create(options, &mut commands, meshes, materials);
 }
