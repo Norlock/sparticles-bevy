@@ -1,4 +1,4 @@
-use crate::force::force::{Force, ForceData};
+use super::force::{Force, ForceData};
 
 pub struct ConstantForce {
     pub nx: f32,

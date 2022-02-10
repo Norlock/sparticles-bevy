@@ -1,4 +1,4 @@
-use macroquad::prelude::*;
+use bevy::render::color::Color;
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
@@ -78,11 +78,11 @@ impl TrailAnimation {
 
         self.trail.iter_mut().reduce(|from, to| {
             if is_new_iteration {
-                from.color.a -= self.opacity_loss_per_update;
+                //from.color.a -= self.opacity_loss_per_update;
             }
 
             if !from.line_end {
-                draw_line(from.x, from.y, to.x, to.y, to.diameter, to.color);
+                //draw_line(from.x, from.y, to.x, to.y, to.diameter, to.color);
             }
 
             to
@@ -90,7 +90,8 @@ impl TrailAnimation {
 
         if is_new_iteration {
             self.iteration = new_iteration;
-            self.trail.retain(|point| point.color.a.is_sign_positive());
+            self.trail
+                .retain(|point| point.color.a().is_sign_positive());
         }
 
         if is_in_cycle {

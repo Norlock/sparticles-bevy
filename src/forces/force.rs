@@ -13,8 +13,10 @@ impl Debug for dyn Force {
 pub struct ForceData {
     pub x: f32,
     pub y: f32,
+    pub z: f32,
     pub vx: f32,
     pub vy: f32,
+    pub vz: f32,
     pub radius: f32,
     pub mass: f32,
 }

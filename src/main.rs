@@ -1,29 +1,32 @@
 #![allow(dead_code)]
 
 use crate::emitters::emitter::EmitterSize;
-use crate::point::{Degrees, Point};
+use crate::pattern::random_forces;
+use crate::point::Point;
+use bevy_config_cam::ConfigCam;
 use bevy_config_cam::MovementSettings;
 use bevy_config_cam::PlayerSettings;
 use std::time::Duration;
 
+//use crate::forces::force::Force;
 use crate::position::Position;
 use bevy::prelude::*;
-use bevy_config_cam::ConfigCam;
 use emitters::emitter::{Emitter, EmitterOptions, EmitterPlugin};
-//mod animations;
+
+mod animations;
 mod collision;
 //mod container;
 mod emitters;
 //mod fill_style;
-mod force;
+mod forces;
 mod grid;
 //mod movement_handler;
 mod particle;
-//mod pattern;
+mod pattern;
 mod point;
 mod position;
 //mod swarm_emitter;
-//mod trails;
+mod trails;
 
 //use grid::{Grid, GridOptions};
 
@@ -154,10 +157,11 @@ fn setup(
         particles_per_emission: 10,
         delay_between_emission_ms: 100,
         particle_lifetime: Duration::from_secs(5),
-        particle_radius: 0.4,
+        particle_radius: 0.3,
         particle_mass: 1.,
         particle_speed: 0.3,
-        particle_friction_coefficient: 0.01,
+        particle_friction_coefficient: 0.005,
+        force_handler: random_forces(),
         bounds: None,
     };
 

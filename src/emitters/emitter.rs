@@ -2,15 +2,15 @@
 //use crate::animations::animation_handler::AnimationHandler;
 //use crate::animations::animation_handler::AnimationOptions;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
-use crate::force::force::ForceData;
-use crate::force::force_handler::ForceHandler;
+use crate::forces::force::ForceData;
+use crate::forces::force_handler;
+use crate::forces::force_handler::ForceHandler;
 use crate::point::Degrees;
 use crate::point::Point;
 use crate::point::Radians;
 use bevy::core::FixedTimestep;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::LogDiagnosticsPlugin;
-use bevy::reflect::Tuple;
 use bevy::tasks::TaskPool;
 //use crate::trails::trail_animation::TrailData;
 //use crate::trails::trail_handler::TrailHandler;
@@ -53,7 +53,7 @@ pub struct EmitterOptions {
     pub bounds: Option<Bounds>,
     //pub particle_animation_options: Option<AnimationOptions>,
     //pub emitter_animation_handler: Option<EmitterAnimationHandler>,
-    //pub force_handler: Option<ForceHandler>,
+    pub force_handler: Option<ForceHandler>,
     //pub trail_handler: Option<TrailHandler>,
 }
 
@@ -70,17 +70,15 @@ pub struct Bounds {
 #[derive(Debug, Component)]
 pub struct Emitter;
 //{
-//position: Position,
 //particle_texture: Option<Texture2D>,
 //trail_handler: Option<TrailHandler>,
 //particle_animation_options: Option<AnimationOptions>,
-//force_handler: Option<ForceHandler>,
 //emitter_animation_handler: Option<EmitterAnimationHandler>,
 //pub particle_count: u32,
 //}
 
 #[derive(Debug, Component)]
-struct Cycle {
+struct LifeCycle {
     lifetime: Arc<Instant>,
     duration_ms: u128,
 }
@@ -129,7 +127,6 @@ pub struct Materials {
     particle_mesh: Handle<Mesh>,
 }
 
-//lifetime: Arc<Instant>,
 //trail_handler: Option<TrailHandler>,
 //animation_handler: Option<AnimationHandler>,
 
@@ -143,10 +140,39 @@ impl Plugin for EmitterPlugin {
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(0.01667))
                 .with_system(transform_particle_system)
-                .with_system(update_emitter_system),
+                .with_system(update_emitter_system)
+                .with_system(apply_forces_system),
         );
         //.add_plugin(LogDiagnosticsPlugin::default())
         //.add_plugin(FrameTimeDiagnosticsPlugin::default())
+    }
+}
+
+fn apply_forces_system(
+    mut particles_query: Query<(&mut Speed, &Transform, &ParticleAttributes), With<Particle>>,
+    forces_query: Query<&ForceHandler>,
+) {
+    for force_handler in forces_query.iter() {
+        let elapsed_ms = force_handler.lifetime.elapsed().as_millis();
+
+        for (mut speed, transform, attributes) in particles_query.iter_mut() {
+            let mut data = ForceData {
+                x: transform.translation.x,
+                y: transform.translation.y,
+                z: transform.translation.z,
+                vx: speed.vx,
+                vy: speed.vy,
+                vz: speed.vz,
+                radius: attributes.radius,
+                mass: attributes.radius,
+            };
+
+            force_handler.apply(&mut data, elapsed_ms);
+
+            speed.vx = data.vx;
+            speed.vy = data.vy;
+            speed.vz = data.vz;
+        }
     }
 }
 
@@ -156,69 +182,42 @@ fn transform_particle_system(
             Entity,
             &mut Speed,
             &mut Transform,
-            &Cycle,
+            &LifeCycle,
             &ParticleAttributes,
         ),
         With<Particle>,
     >,
     mut commands: Commands,
 ) {
-    let now = Instant::now();
-    let task_pool = TaskPool::new();
+    for (entity, mut speed, mut transform, cycle, attributes) in query.iter_mut() {
+        let x_force = speed.vx * attributes.mass;
+        let y_force = speed.vy * attributes.mass;
+        let z_force = speed.vz * attributes.mass;
 
-    let entities: Arc<Mutex<Vec<Entity>>> = Arc::new(Mutex::new(Vec::new()));
+        let x_friction = x_force * attributes.friction_coefficient;
+        let y_friction = y_force * attributes.friction_coefficient;
+        let z_friction = z_force * attributes.friction_coefficient;
 
-    query.par_for_each_mut(
-        &task_pool,
-        50,
-        |(entity, mut speed, mut transform, cycle, attributes)| {
-            let x_force = speed.vx * attributes.mass;
-            let y_force = speed.vy * attributes.mass;
-            let z_force = speed.vz * attributes.mass;
+        speed.vx = (x_force - x_friction) / attributes.mass;
+        speed.vy = (y_force - y_friction) / attributes.mass;
+        speed.vz = (z_force - z_friction) / attributes.mass;
 
-            let x_friction = x_force * attributes.friction_coefficient;
-            let y_friction = y_force * attributes.friction_coefficient;
-            let z_friction = z_force * attributes.friction_coefficient;
+        transform.translation.x += speed.vx;
+        transform.translation.y += speed.vy;
+        transform.translation.z += speed.vz;
 
-            speed.vx = (x_force - x_friction) / attributes.mass;
-            speed.vy = (y_force - y_friction) / attributes.mass;
-            speed.vz = (z_force - z_friction) / attributes.mass;
-
-            transform.translation.x += speed.vx;
-            transform.translation.y += speed.vy;
-            transform.translation.z += speed.vz;
-
-            if cycle.duration_ms < cycle.lifetime.elapsed().as_millis() {
-                let mut array = entities.lock().unwrap();
-                array.push(entity);
-            }
-        },
-    );
-
-    let mut array = entities.lock().unwrap();
-
-    for _ in 0..array.len() {
-        let entity = array.pop().unwrap();
-        commands.entity(entity).despawn();
+        if cycle.duration_ms < cycle.lifetime.elapsed().as_millis() {
+            commands.entity(entity).despawn();
+        }
     }
-
-    //for (entity, speed, mut transform, cycle) in query.iter_mut() {
-    //transform.translation.x += speed.vx;
-    //transform.translation.y += speed.vy;
-    //transform.translation.z += speed.vz;
-
-    //if cycle.duration_ms < cycle.lifetime.elapsed().as_millis() {
-    //commands.entity(entity).despawn();
-    //}
-    //}
-    println!("{}", now.elapsed().as_micros());
 }
 
+// TODO materials as component for emitter instead of resource.
 fn update_emitter_system(
     mut query: Query<
         (
             Entity,
-            &Cycle,
+            &LifeCycle,
             &mut EmitOptions,
             &ParticleOptions,
             &Position,
@@ -279,7 +278,7 @@ fn update_emitter_system(
                 ..Default::default()
             };
             let speed = Speed { vx, vy, vz };
-            let cycle = Cycle {
+            let cycle = LifeCycle {
                 lifetime: lifetime.clone(),
                 duration_ms: particle.duration_ms,
             };
@@ -291,7 +290,8 @@ fn update_emitter_system(
             };
 
             commands
-                .spawn_bundle(bundle)
+                .spawn()
+                .insert_bundle(bundle)
                 .insert_bundle((speed, cycle, attributes, Particle));
         }
     }
@@ -321,7 +321,7 @@ impl Emitter {
             particle_friction_coefficient,
             bounds,
             //emitter_animation_handler,
-            //force_handler,
+            force_handler,
         } = options;
 
         let angle_radians = angle_degrees.to_radians();
@@ -338,7 +338,7 @@ impl Emitter {
             emitter_size,
         };
 
-        let emit_time = Cycle {
+        let emit_time = LifeCycle {
             duration_ms: emitter_duration.as_millis(),
             lifetime: Arc::new(Instant::now()),
         };
@@ -370,6 +370,10 @@ impl Emitter {
 
         if let Some(bounds) = bounds {
             builder.insert(bounds);
+        }
+
+        if let Some(force_handler) = force_handler {
+            builder.insert(force_handler);
         }
     }
 
@@ -470,15 +474,6 @@ impl Emitter {
     //fn update_particles(&mut self, emitter_elapsed_ms: u128) {
     //for i in (0..self.particles.len()).rev() {
     //let mut particle = self.particles.swap_remove(i);
-
-    //let x_force = particle.vx * self.particle_mass;
-    //let y_force = particle.vy * self.particle_mass;
-
-    //let x_friction = x_force * self.particle_friction_coefficient;
-    //let y_friction = y_force * self.particle_friction_coefficient;
-
-    //let vx = (x_force - x_friction) / self.particle_mass;
-    //let vy = (y_force - y_friction) / self.particle_mass;
 
     ////if let Some(force_handler) = &mut self.force_handler {
     ////let mut data = ForceData {

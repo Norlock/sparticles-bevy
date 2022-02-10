@@ -1,4 +1,4 @@
-use macroquad::prelude::Color;
+use bevy::render::color::Color;
 use std::fmt::Debug;
 
 pub const FRAME_TIME: u32 = 16;

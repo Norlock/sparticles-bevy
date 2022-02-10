@@ -1,5 +1,4 @@
 use super::animation::{Animate, AnimationData, AnimationTime};
-use macroquad::prelude::rand;
 use std::fmt::Debug;
 use std::rc::Rc;
 
@@ -34,17 +33,18 @@ impl AnimationHandler {
     pub fn new(options: &Option<AnimationOptions>) -> Option<Self> {
         match options {
             Some(ah) => {
-                let animation_offset_ms = match ah.start_at {
-                    StartAnimationAt::Zero => 0,
-                    StartAnimationAt::Random => rand::gen_range(0, ah.duration_ms),
-                    StartAnimationAt::RangeMs(start, end) => rand::gen_range(start, end),
-                };
-                Some(AnimationHandler {
-                    iteration: 0,
-                    animation_offset_ms,
-                    animations: Rc::clone(&ah.animations),
-                    duration_ms: ah.duration_ms,
-                })
+                //let animation_offset_ms = match ah.start_at {
+                //StartAnimationAt::Zero => 0,
+                //StartAnimationAt::Random => rand::gen_range(0, ah.duration_ms),
+                //StartAnimationAt::RangeMs(start, end) => rand::gen_range(start, end),
+                //};
+                //Some(AnimationHandler {
+                //iteration: 0,
+                //animation_offset_ms,
+                //animations: Rc::clone(&ah.animations),
+                //duration_ms: ah.duration_ms,
+                //})
+                None
             }
             None => None,
         }

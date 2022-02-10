@@ -1,7 +1,6 @@
 use super::animation::Animate;
 use super::animation::AnimationData;
 use super::animation::AnimationTime;
-use macroquad::prelude::rand;
 
 pub struct StrayAnimation {
     from_ms: u32,
@@ -25,8 +24,8 @@ impl Animate for StrayAnimation {
             return;
         }
 
-        let stray = rand::gen_range(-self.strayness_radians, self.strayness_radians);
-        data.vx = (data.vx * stray.cos()) - (data.vy * stray.sin());
-        data.vy = (data.vx * stray.sin()) + (data.vy * stray.cos());
+        //let stray = rand::gen_range(-self.strayness_radians, self.strayness_radians);
+        //data.vx = (data.vx * stray.cos()) - (data.vy * stray.sin());
+        //data.vy = (data.vx * stray.sin()) + (data.vy * stray.cos());
     }
 }

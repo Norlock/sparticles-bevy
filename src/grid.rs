@@ -1,5 +1,5 @@
-use crate::force::force::ForceData;
-use crate::force::force_handler::ForceHandler;
+use crate::forces::force::ForceData;
+use crate::forces::force_handler::ForceHandler;
 use crate::particle::Particle;
 use bevy::prelude::*;
 use std::{rc::Rc, time::Instant};
@@ -67,7 +67,7 @@ impl Grid {
             possibility_y_count,
             possibility_z_count,
             possibility_side_length,
-            mut position,
+            position,
             //force_handler,
         } = options;
         let cell_width = possibility_x_count * possibility_side_length;
