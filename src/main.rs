@@ -6,6 +6,7 @@ use crate::point::Point;
 use bevy_config_cam::ConfigCam;
 use bevy_config_cam::MovementSettings;
 use bevy_config_cam::PlayerSettings;
+use emitters::emitter::Bounds;
 use std::time::Duration;
 
 //use crate::forces::force::Force;
@@ -129,8 +130,31 @@ fn setup(
     ////force_handler: random_forces(),
     //});
 
+    commands.spawn_bundle(PointLightBundle {
+        // transform: Transform::from_xyz(5.0, 8.0, 2.0),
+        transform: Transform::from_xyz(1.0, 2.0, 0.0),
+        point_light: PointLight {
+            intensity: 16000.0, // lumens - roughly a 100W non-halogen incandescent bulb
+            color: Color::ALICE_BLUE,
+            shadows_enabled: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
+    // ambient light
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 0.5,
+    });
+
     commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(0., 10., 100.),
+        //transform: Transform::from_xyz(0., 10., 100.),
+        transform: Transform {
+            translation: Vec3::new(0., 10., 100.),
+            //rotation: Quat::from_rotation_z(90_f32.to_radians()),
+            ..Default::default()
+        },
         ..Default::default()
     });
 
@@ -162,7 +186,14 @@ fn setup(
         particle_speed: 0.3,
         particle_friction_coefficient: 0.005,
         force_handler: random_forces(),
-        bounds: None,
+        bounds: Some(Bounds {
+            start_x: None,
+            start_y: Some(0.),
+            start_z: None,
+            end_x: None,
+            end_y: None,
+            end_z: None,
+        }),
     };
 
     Emitter::create(options, &mut commands, meshes, materials);

@@ -1,6 +1,7 @@
 //use crate::animations::animation::AnimationData;
 //use crate::animations::animation_handler::AnimationHandler;
 //use crate::animations::animation_handler::AnimationOptions;
+use crate::animations::animation::Animate;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::forces::force::ForceData;
 use crate::forces::force_handler;
@@ -59,23 +60,16 @@ pub struct EmitterOptions {
 
 #[derive(Debug, Component)]
 pub struct Bounds {
-    start_x: f32,
-    start_y: f32,
-    start_z: f32,
-    end_x: f32,
-    end_y: f32,
-    end_z: f32,
+    pub start_x: Option<f32>,
+    pub start_y: Option<f32>,
+    pub start_z: Option<f32>,
+    pub end_x: Option<f32>,
+    pub end_y: Option<f32>,
+    pub end_z: Option<f32>,
 }
 
 #[derive(Debug, Component)]
 pub struct Emitter;
-//{
-//particle_texture: Option<Texture2D>,
-//trail_handler: Option<TrailHandler>,
-//particle_animation_options: Option<AnimationOptions>,
-//emitter_animation_handler: Option<EmitterAnimationHandler>,
-//pub particle_count: u32,
-//}
 
 #[derive(Debug, Component)]
 struct LifeCycle {
@@ -95,8 +89,9 @@ struct EmitOptions {
     emitter_size: EmitterSize,
 }
 
+/// Which values particles are deployed with.
 #[derive(Debug, Component)]
-struct ParticleOptions {
+struct EmitterParticleAttributes {
     duration_ms: u128,
     radius: f32,
     mass: f32,
@@ -109,7 +104,13 @@ struct ParticleOptions {
 struct Particle;
 
 #[derive(Debug, Component)]
-struct Speed {
+struct Particles(Vec<Entity>);
+
+//#[derive(Component)]
+//struct Animations(Vec<Box<dyn Animate + Sync + Send>>);
+
+#[derive(Debug, Component)]
+struct Velocity {
     vx: f32,
     vy: f32,
     vz: f32,
@@ -141,7 +142,8 @@ impl Plugin for EmitterPlugin {
                 .with_run_criteria(FixedTimestep::step(0.01667))
                 .with_system(transform_particle_system)
                 .with_system(update_emitter_system)
-                .with_system(apply_forces_system),
+                .with_system(apply_forces_system)
+                .with_system(check_bounds_system),
         );
         //.add_plugin(LogDiagnosticsPlugin::default())
         //.add_plugin(FrameTimeDiagnosticsPlugin::default())
@@ -149,29 +151,75 @@ impl Plugin for EmitterPlugin {
 }
 
 fn apply_forces_system(
-    mut particles_query: Query<(&mut Speed, &Transform, &ParticleAttributes), With<Particle>>,
-    forces_query: Query<&ForceHandler>,
+    mut particles_query: Query<(&mut Velocity, &Transform, &ParticleAttributes), With<Particle>>,
+    emitter_query: Query<(&ForceHandler, &Particles), With<Emitter>>,
 ) {
-    for force_handler in forces_query.iter() {
+    for (force_handler, particles) in emitter_query.iter() {
         let elapsed_ms = force_handler.lifetime.elapsed().as_millis();
+        for &particle_entity in particles.0.iter() {
+            if let Ok((mut velocity, transform, attributes)) =
+                particles_query.get_mut(particle_entity)
+            {
+                let mut data = ForceData {
+                    x: transform.translation.x,
+                    y: transform.translation.y,
+                    z: transform.translation.z,
+                    vx: velocity.vx,
+                    vy: velocity.vy,
+                    vz: velocity.vz,
+                    radius: attributes.radius,
+                    mass: attributes.radius,
+                };
 
-        for (mut speed, transform, attributes) in particles_query.iter_mut() {
-            let mut data = ForceData {
-                x: transform.translation.x,
-                y: transform.translation.y,
-                z: transform.translation.z,
-                vx: speed.vx,
-                vy: speed.vy,
-                vz: speed.vz,
-                radius: attributes.radius,
-                mass: attributes.radius,
-            };
+                force_handler.apply(&mut data, elapsed_ms);
 
-            force_handler.apply(&mut data, elapsed_ms);
+                velocity.vx = data.vx;
+                velocity.vy = data.vy;
+                velocity.vz = data.vz;
+            }
+        }
+    }
+}
 
-            speed.vx = data.vx;
-            speed.vy = data.vy;
-            speed.vz = data.vz;
+fn check_bounds_system(
+    mut particles_query: Query<(&Transform, &ParticleAttributes), With<Particle>>,
+    emitter_query: Query<(&Bounds, &Particles), With<Emitter>>,
+    mut commands: Commands,
+) {
+    for (bounds, particles) in emitter_query.iter() {
+        for &particle_entity in particles.0.iter() {
+            if let Ok((transform, attributes)) = particles_query.get_mut(particle_entity) {
+                let translation = &transform.translation;
+                let diameter = attributes.radius * 2.;
+
+                let below_x = bounds
+                    .start_x
+                    .map_or(false, |start_x| translation.x < start_x);
+
+                let below_y = bounds
+                    .start_y
+                    .map_or(false, |start_y| translation.y < start_y);
+
+                let below_z = bounds
+                    .start_z
+                    .map_or(false, |start_z| translation.z < start_z);
+
+                let above_x = bounds
+                    .end_x
+                    .map_or(false, |end_x| end_x < translation.x + diameter);
+
+                let above_y = bounds
+                    .end_y
+                    .map_or(false, |end_y| end_y < translation.y + diameter);
+
+                let above_z = bounds
+                    .end_z
+                    .map_or(false, |end_z| end_z < translation.z + diameter);
+
+                if below_x || below_y || below_z || above_x || above_y || above_z {
+                    commands.entity(particle_entity).despawn();
+                }
+            }
         }
     }
 }
@@ -180,7 +228,7 @@ fn transform_particle_system(
     mut query: Query<
         (
             Entity,
-            &mut Speed,
+            &mut Velocity,
             &mut Transform,
             &LifeCycle,
             &ParticleAttributes,
@@ -219,15 +267,16 @@ fn update_emitter_system(
             Entity,
             &LifeCycle,
             &mut EmitOptions,
-            &ParticleOptions,
+            &EmitterParticleAttributes,
             &Position,
+            &mut Particles,
         ),
         With<Emitter>,
     >,
     mut commands: Commands,
     materials: Res<Materials>,
 ) {
-    for (entity, cycle, mut emit_options, particle, position) in query.iter_mut() {
+    for (entity, cycle, mut emit_options, particle, position, mut particles) in query.iter_mut() {
         let elapsed_ms = cycle.lifetime.elapsed().as_millis();
         let overdue = elapsed_ms > cycle.duration_ms;
 
@@ -247,6 +296,7 @@ fn update_emitter_system(
         let mut rng = thread_rng();
 
         let lifetime = Arc::new(Instant::now());
+
         for _ in 0..emit_options.particles_per_emission {
             let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
             let emitter_depth = gen_abs_range(&mut rng, emit_options.emitter_size.depth);
@@ -255,7 +305,7 @@ fn update_emitter_system(
             let Point(elevation, bearing) = emit_options.angle_radians;
             let x = (position.x + distortion) + emitter_length * elevation.cos() * bearing.cos();
             let y = (position.y + distortion) + emitter_length * elevation.sin() * bearing.cos();
-            let z = (position.z + distortion) + emitter_depth * bearing.sin();
+            let z = (position.z + distortion) + emitter_depth + emitter_length * bearing.sin();
 
             let diffusion_elevation_delta =
                 gen_dyn_range(&mut rng, emit_options.diffusion_radians.0);
@@ -277,7 +327,8 @@ fn update_emitter_system(
                 },
                 ..Default::default()
             };
-            let speed = Speed { vx, vy, vz };
+
+            let speed = Velocity { vx, vy, vz };
             let cycle = LifeCycle {
                 lifetime: lifetime.clone(),
                 duration_ms: particle.duration_ms,
@@ -289,10 +340,13 @@ fn update_emitter_system(
                 mass: particle.mass,
             };
 
-            commands
+            let id = commands
                 .spawn()
                 .insert_bundle(bundle)
-                .insert_bundle((speed, cycle, attributes, Particle));
+                .insert_bundle((speed, cycle, attributes, Particle))
+                .id();
+
+            particles.0.push(id);
         }
     }
 }
@@ -343,7 +397,7 @@ impl Emitter {
             lifetime: Arc::new(Instant::now()),
         };
 
-        let spawn_options = ParticleOptions {
+        let spawn_options = EmitterParticleAttributes {
             speed: particle_speed,
             color: particle_color,
             friction_coefficient: particle_friction_coefficient,
@@ -366,6 +420,7 @@ impl Emitter {
             .insert(emit_time)
             .insert(emitter_position)
             .insert(spawn_options)
+            .insert(Particles(Vec::new()))
             .insert(Emitter);
 
         if let Some(bounds) = bounds {
