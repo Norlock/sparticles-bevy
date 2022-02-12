@@ -106,7 +106,7 @@ struct EmitterParticleAttributes {
 }
 
 #[derive(Debug, Component)]
-struct Particle;
+pub struct Particle;
 
 #[derive(Debug, Component)]
 struct Particles(Vec<Entity>);

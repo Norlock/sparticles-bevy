@@ -7,6 +7,7 @@ use crate::point::Point;
 use bevy_config_cam::ConfigCam;
 use bevy_config_cam::MovementSettings;
 use bevy_config_cam::PlayerSettings;
+use dev_ui::DevUIPlugin;
 use emitters::emitter::Bounds;
 use std::time::Duration;
 
@@ -21,6 +22,7 @@ mod collision;
 mod emitters;
 mod instant_extensions;
 //mod fill_style;
+mod dev_ui;
 mod forces;
 mod grid;
 //mod movement_handler;
@@ -99,18 +101,7 @@ fn main() {
         .add_startup_system(setup)
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.)))
         .add_plugins(DefaultPlugins)
-        //.add_plugin(ConfigCam)
-        //.insert_resource(MovementSettings {
-        //sensitivity: 0.00015, // default: 0.00012
-        //speed: 50.0,          // default: 12.0
-        //dist: 50.0,           // Camera distance from the player in topdown view
-        //..Default::default()
-        //})
-        //.insert_resource(PlayerSettings {
-        //pos: Vec3::new(0., 100., 0.), //Initial position of the player
-        ////player_asset: "models/craft_speederA.glb#Scene0", //Model of the player, default is a red cube
-        //..Default::default()
-        //})
+        .add_plugin(DevUIPlugin)
         .add_plugin(EmitterPlugin)
         .run();
 }
@@ -133,7 +124,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         transform: Transform::from_xyz(1.0, 2.0, 0.0),
         point_light: PointLight {
             intensity: 3000.0, // lumens - roughly a 100W non-halogen incandescent bulb
-            color: Color::ALICE_BLUE,
+            color: Color::ORANGE,
             shadows_enabled: true,
             ..Default::default()
         },
@@ -168,7 +159,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         },
         emitter_duration: Duration::from_secs(10),
         angle_degrees: Point(0., 0.),
-        diffusion_degrees: Point(60., 60.),
+        diffusion_degrees: Point(360., 360.),
         emission_distortion: 0.,
         particle_color: Color::Rgba {
             red: 0.5,
@@ -176,7 +167,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             blue: 0.5,
             alpha: 1.,
         },
-        particles_per_emission: 1,
+        particles_per_emission: 5,
         delay_between_emission_ms: 100,
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.3,

@@ -7,9 +7,13 @@ pub struct LooseMovementAnimation {
     pub until_ms: u32,
     pub vx: f32,
     pub vy: f32,
+    //pub vz: f32,
     pub stray_radians: f32,
+    // pub max_range: f32,
 }
 
+// TODO pass base point which will act as a guideline, the further the emitter will fly off the more force it
+// will apply to return. Using inverse gravitational force.
 impl EmitterAnimate for LooseMovementAnimation {
     fn animate(&mut self, data: &mut EmitterData, cycle_ms: u32) {
         if cycle_ms < self.from_ms || self.until_ms <= cycle_ms {

@@ -2,6 +2,7 @@ use crate::animations::animation::Animate;
 use crate::animations::animation_handler::AnimationOptions;
 use crate::animations::animation_handler::StartAnimationAt;
 use crate::animations::color_animation::DuoColorAnimation;
+use crate::animations::size_animation::SizeAnimation;
 use crate::animations::stray_animation::StrayAnimation;
 use crate::emitters::diffusion_animation::DiffusionAnimation;
 use crate::emitters::emit_color_animation::EmitColorAnimation;
@@ -42,14 +43,21 @@ pub fn shimmer_animations() -> AnimationOptions {
     //until_ms: 4000,
     //}));
 
-    animations.push(Box::new(StrayAnimation::new(3000, 5000, 3.)));
+    animations.push(Box::new(StrayAnimation::new(0, 5000, 5.)));
 
-    //animations.push(Box::new(SizeAnimation {
-    //from_ms: 4000,
-    //until_ms: 5000,
-    //start_scale: 1.,
-    //end_scale: 2.,
-    //}));
+    animations.push(Box::new(SizeAnimation {
+        from_ms: 2000,
+        until_ms: 3000,
+        start_scale: 1.,
+        end_scale: 1.5,
+    }));
+
+    animations.push(Box::new(SizeAnimation {
+        from_ms: 3000,
+        until_ms: 4000,
+        start_scale: 1.5,
+        end_scale: 1.,
+    }));
 
     AnimationOptions::new(5000, StartAnimationAt::RangeMs(0, 1000), animations)
 }
@@ -362,23 +370,23 @@ pub fn random_forces() -> Option<ForceHandler> {
 
     force_handler.add(Box::new(GravitationalForce {
         from_ms: 0,
-        until_ms: 6000,
+        until_ms: 3000,
+        gravitation_force: -0.01,
+        dead_zone: 5.,
+        mass: 100.,
+        start: Vec3::new(0., 0., 0.),
+        end: Vec3::new(0., 0., 0.),
+    }));
+
+    force_handler.add(Box::new(GravitationalForce {
+        from_ms: 3000,
+        until_ms: forces_length,
         gravitation_force: 0.01,
         dead_zone: 5.,
         mass: 1000.,
         start: Vec3::new(0., 0., 0.),
         end: Vec3::new(0., 0., 0.),
     }));
-
-    //force_handler.add(Box::new(GravitationalForce {
-    //from_ms: 0,
-    //until_ms: 6000,
-    //gravitation_force: 0.4,
-    //dead_zone: 20.,
-    //mass: 1000.,
-    //start: Point(100., 900.),
-    //end: Point(100., 900.),
-    //}));
 
     Some(force_handler)
 }
