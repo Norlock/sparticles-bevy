@@ -1,5 +1,5 @@
 use super::force::{Force, ForceData};
-use crate::point::Point;
+use bevy::math::Vec3;
 
 pub struct GravitationalForce {
     /// In newton
@@ -9,64 +9,66 @@ pub struct GravitationalForce {
     pub mass: f32,
     pub from_ms: u128,
     pub until_ms: u128,
-    pub start: Point,
-    pub end: Point,
+    pub start: Vec3,
+    pub end: Vec3,
 }
 
 impl GravitationalForce {
-    fn current_point(&self, force_cycle_ms: u128) -> Point {
+    fn current_point(&self, force_cycle_ms: u128) -> Vec3 {
         let delta_current = force_cycle_ms - self.from_ms;
         let delta_end = self.until_ms - self.from_ms;
 
         let fraction = delta_current as f32 / delta_end as f32;
-
-        let x = self.start.0 + fraction * (self.end.0 - self.start.0);
-        let y = self.start.1 + fraction * (self.end.1 - self.start.1);
-
-        Point(x, y)
+        Vec3::lerp(self.start, self.end, fraction)
     }
 }
 
 impl Force for GravitationalForce {
     // Based on newton's law of universal gravity.
-    fn apply(&self, particle: &mut ForceData, force_cycle_ms: u128) {
+    fn apply(&self, data: &mut ForceData, force_cycle_ms: u128) {
         if force_cycle_ms < self.from_ms || self.until_ms <= force_cycle_ms {
             return;
         }
 
-        let point = self.current_point(force_cycle_ms);
+        let gravitational_point = self.current_point(force_cycle_ms);
 
-        let particle_center_x = particle.x + particle.radius;
-        let particle_center_y = particle.y + particle.radius;
-        let x_distance = point.0 - particle_center_x;
-        let y_distance = point.1 - particle_center_y;
+        let position = data.position;
+        let velocity = &mut data.velocity;
 
-        if x_distance.abs() < self.dead_zone && y_distance.abs() < self.dead_zone {
+        let particle_center_x = position.x + data.radius.x;
+        let particle_center_y = position.y + data.radius.y;
+        let particle_center_z = position.z + data.radius.z;
+        let x_distance = gravitational_point.x - particle_center_x;
+        let y_distance = gravitational_point.y - particle_center_y;
+        let z_distance = gravitational_point.z - particle_center_z;
+
+        if x_distance.abs() < self.dead_zone
+            && y_distance.abs() < self.dead_zone
+            && z_distance.abs() < self.dead_zone
+        {
             return;
         }
 
         let x_distance_pow = x_distance.powi(2);
         let y_distance_pow = y_distance.powi(2);
-        let distance_pow = x_distance_pow + y_distance_pow;
+        let z_distance_pow = z_distance.powi(2);
 
-        let top_formula = self.gravitation_force * self.mass * particle.mass;
+        let distance_pow = x_distance_pow + y_distance_pow + z_distance_pow;
+
+        let top_formula = self.gravitation_force * self.mass * data.mass;
         let force = top_formula / distance_pow;
 
         let x_percentage = x_distance_pow / distance_pow;
         let y_percentage = y_distance_pow / distance_pow;
+        let z_percentage = z_distance_pow / distance_pow;
 
-        let vx = force * x_percentage / particle.mass;
-        if 0. < x_distance {
-            particle.vx += vx;
-        } else if x_distance < 0. {
-            particle.vx -= vx;
-        }
+        let vx = force * x_percentage / data.mass;
+        velocity.vx += vx * x_distance.signum();
 
-        let vy = force * y_percentage / particle.mass;
-        if 0. < y_distance {
-            particle.vy += vy;
-        } else if y_distance < 0. {
-            particle.vy -= vy;
-        }
+        let vy = force * y_percentage / data.mass;
+        velocity.vy += vy * y_distance.signum();
+
+        let vz = force * z_percentage / data.mass;
+        velocity.vz += vz * z_distance.signum();
     }
 }

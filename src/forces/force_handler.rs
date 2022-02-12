@@ -3,7 +3,6 @@ use std::time::Instant;
 
 use super::force::Force;
 use super::force::ForceData;
-use std::time::Duration;
 
 #[derive(Component)]
 pub struct ForceHandler {
@@ -13,9 +12,9 @@ pub struct ForceHandler {
 }
 
 impl ForceHandler {
-    pub fn new(duration: Duration) -> Self {
+    pub fn new(duration_ms: u128) -> Self {
         Self {
-            duration_ms: duration.as_millis(),
+            duration_ms,
             forces: Vec::new(),
             lifetime: Instant::now(),
         }

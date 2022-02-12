@@ -168,7 +168,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         },
         emitter_duration: Duration::from_secs(10),
         angle_degrees: Point(0., 0.),
-        diffusion_degrees: Point(60., 10.),
+        diffusion_degrees: Point(60., 60.),
         emission_distortion: 0.,
         particle_color: Color::Rgba {
             red: 0.5,
@@ -176,7 +176,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             blue: 0.5,
             alpha: 1.,
         },
-        particles_per_emission: 20,
+        particles_per_emission: 1,
         delay_between_emission_ms: 100,
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.3,

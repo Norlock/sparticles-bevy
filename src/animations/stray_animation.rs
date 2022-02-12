@@ -32,8 +32,13 @@ impl Animate for StrayAnimation {
         let stray_bearing = rng.gen_range(-self.strayness_radians..self.strayness_radians);
 
         let velocity = &mut data.velocity;
-        velocity.vx = (velocity.vx * stray_elevation.cos()) - (velocity.vy * stray_elevation.sin());
-        velocity.vy = (velocity.vx * stray_elevation.sin()) + (velocity.vy * stray_elevation.cos());
+        let vx_elevation =
+            (velocity.vx * stray_elevation.cos()) - (velocity.vy * stray_elevation.sin());
+        let vy_elevation =
+            (velocity.vx * stray_elevation.sin()) + (velocity.vy * stray_elevation.cos());
+
+        velocity.vx = vx_elevation * stray_bearing.cos();
+        velocity.vy = vy_elevation * stray_bearing.cos();
         velocity.vz *= stray_bearing.sin();
     }
 }

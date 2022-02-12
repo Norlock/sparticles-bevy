@@ -2,8 +2,6 @@ use crate::animations::animation::Animate;
 use crate::animations::animation_handler::AnimationOptions;
 use crate::animations::animation_handler::StartAnimationAt;
 use crate::animations::color_animation::DuoColorAnimation;
-use crate::animations::color_animation::MonoColorAnimation;
-use crate::animations::size_animation::SizeAnimation;
 use crate::animations::stray_animation::StrayAnimation;
 use crate::emitters::diffusion_animation::DiffusionAnimation;
 use crate::emitters::emit_color_animation::EmitColorAnimation;
@@ -18,10 +16,10 @@ use crate::forces::accelerating_force::AcceleratingForce;
 use crate::forces::constant_force::ConstantForce;
 use crate::forces::force_handler::ForceHandler;
 use crate::forces::gravitational_force::GravitationalForce;
-use crate::point::Point;
 use crate::trails::trail_animation::TrailAnimation;
 use crate::trails::trail_animation::TrailOptions;
 use crate::trails::trail_handler::TrailHandler;
+use bevy::math::Vec3;
 use bevy::render::color::Color;
 use std::time::Duration;
 
@@ -337,49 +335,50 @@ fn sway_and_diffusion_animation() -> Option<EmitterAnimationHandler> {
 //}
 
 pub fn random_forces() -> Option<ForceHandler> {
-    let mut force_handler = ForceHandler::new(Duration::from_secs(6));
+    let forces_length = Duration::from_secs(6).as_millis();
+    let mut force_handler = ForceHandler::new(forces_length);
 
-    force_handler.add(Box::new(AcceleratingForce {
-        from_ms: 0,
-        until_ms: 1000,
-        nx: 0.022,
-        ny: 0.02,
-        nz: 0.,
-        max_vx: 0.2,
-        max_vy: 0.2,
-        max_vz: 0.,
-    }));
+    //force_handler.add(Box::new(AcceleratingForce {
+    //from_ms: 0,
+    //until_ms: 1000,
+    //nx: 0.022,
+    //ny: 0.02,
+    //nz: 0.,
+    //max_vx: 0.2,
+    //max_vy: 0.2,
+    //max_vz: 0.,
+    //}));
 
-    force_handler.add(Box::new(AcceleratingForce {
-        from_ms: 2_000,
-        until_ms: 3_000,
-        nx: 0.01,
-        ny: -0.004,
-        nz: 0.,
-        max_vx: -0.2,
-        max_vy: -0.2,
-        max_vz: 0.,
-    }));
-
-    force_handler.add(Box::new(GravitationalForce {
-        from_ms: 0,
-        until_ms: 6000,
-        gravitation_force: 0.5,
-        dead_zone: 30.,
-        mass: 1000.,
-        start: Point(200., 200.),
-        end: Point(1000., 1000.),
-    }));
+    //force_handler.add(Box::new(AcceleratingForce {
+    //from_ms: 2_000,
+    //until_ms: 3_000,
+    //nx: 0.01,
+    //ny: -0.004,
+    //nz: 0.,
+    //max_vx: -0.2,
+    //max_vy: -0.2,
+    //max_vz: 0.,
+    //}));
 
     force_handler.add(Box::new(GravitationalForce {
         from_ms: 0,
         until_ms: 6000,
-        gravitation_force: 0.4,
-        dead_zone: 20.,
+        gravitation_force: 0.01,
+        dead_zone: 5.,
         mass: 1000.,
-        start: Point(100., 900.),
-        end: Point(100., 900.),
+        start: Vec3::new(0., 0., 0.),
+        end: Vec3::new(0., 0., 0.),
     }));
+
+    //force_handler.add(Box::new(GravitationalForce {
+    //from_ms: 0,
+    //until_ms: 6000,
+    //gravitation_force: 0.4,
+    //dead_zone: 20.,
+    //mass: 1000.,
+    //start: Point(100., 900.),
+    //end: Point(100., 900.),
+    //}));
 
     Some(force_handler)
 }

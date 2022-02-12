@@ -1,5 +1,9 @@
 use std::fmt::Debug;
 
+use bevy::math::Vec3;
+
+use crate::emitters::emitter::Velocity;
+
 pub trait Force {
     fn apply(&self, particle: &mut ForceData, force_cycle_ms: u128);
 }
@@ -10,13 +14,9 @@ impl Debug for dyn Force {
     }
 }
 
-pub struct ForceData {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub vx: f32,
-    pub vy: f32,
-    pub vz: f32,
-    pub radius: f32,
+pub struct ForceData<'a, 'b> {
+    pub position: &'a Vec3,
+    pub velocity: &'b mut Velocity,
+    pub radius: Vec3,
     pub mass: f32,
 }

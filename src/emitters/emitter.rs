@@ -170,22 +170,21 @@ fn apply_forces_system(
             if let Ok((mut velocity, transform, attributes)) =
                 particles_query.get_mut(particle_entity)
             {
+                let scale = &transform.scale;
+                let radius = Vec3::new(
+                    scale.x * attributes.radius,
+                    scale.y * attributes.radius,
+                    scale.z * attributes.radius,
+                );
+
                 let mut data = ForceData {
-                    x: transform.translation.x,
-                    y: transform.translation.y,
-                    z: transform.translation.z,
-                    vx: velocity.vx,
-                    vy: velocity.vy,
-                    vz: velocity.vz,
-                    radius: attributes.radius * transform.scale.x,
-                    mass: attributes.radius,
+                    position: &transform.translation,
+                    velocity: &mut velocity,
+                    radius,
+                    mass: attributes.mass,
                 };
 
                 force_handler.apply(&mut data, elapsed_ms);
-
-                velocity.vx = data.vx;
-                velocity.vy = data.vy;
-                velocity.vz = data.vz;
             }
         }
     }
