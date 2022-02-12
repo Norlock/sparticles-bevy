@@ -2,10 +2,9 @@ use super::animation::Animate;
 use super::animation::AnimationData;
 use super::animation::AnimationTime;
 
-#[derive(Clone, Debug)]
 pub struct SizeAnimation {
-    pub start_radius: f32,
-    pub end_radius: f32,
+    pub start_scale: f32,
+    pub end_scale: f32,
     pub from_ms: u32,
     pub until_ms: u32,
 }
@@ -21,6 +20,9 @@ impl Animate for SizeAnimation {
 
         // calculate percent
         let fraction = delta_current as f32 / delta_max as f32;
-        data.radius = self.start_radius + fraction * (self.end_radius - self.start_radius);
+        let scale = self.start_scale + fraction * (self.end_scale - self.start_scale);
+        data.scale.x = scale;
+        data.scale.y = scale;
+        data.scale.z = scale;
     }
 }

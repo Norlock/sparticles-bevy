@@ -1,3 +1,4 @@
+use bevy::math::Vec3;
 use bevy::render::color::Color;
 use std::fmt::Debug;
 
@@ -18,9 +19,10 @@ impl Debug for dyn Animate {
     }
 }
 
-pub struct AnimationData {
-    pub color: Color,
-    pub radius: f32,
+pub struct AnimationData<'a> {
+    pub color: &'a mut Color,
+    pub scale: Vec3,
     pub vx: f32,
     pub vy: f32,
+    pub vz: f32,
 }

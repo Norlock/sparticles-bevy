@@ -2,6 +2,7 @@
 
 use crate::emitters::emitter::EmitterSize;
 use crate::pattern::random_forces;
+use crate::pattern::shimmer_animations;
 use crate::point::Point;
 use bevy_config_cam::ConfigCam;
 use bevy_config_cam::MovementSettings;
@@ -18,6 +19,7 @@ mod animations;
 mod collision;
 //mod container;
 mod emitters;
+mod instant_extensions;
 //mod fill_style;
 mod forces;
 mod grid;
@@ -113,11 +115,7 @@ fn main() {
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) {
     //let grid = Grid::new(GridOptions {
     //cell_x_count: 10,
     //cell_y_count: 10,
@@ -134,7 +132,7 @@ fn setup(
         // transform: Transform::from_xyz(5.0, 8.0, 2.0),
         transform: Transform::from_xyz(1.0, 2.0, 0.0),
         point_light: PointLight {
-            intensity: 16000.0, // lumens - roughly a 100W non-halogen incandescent bulb
+            intensity: 3000.0, // lumens - roughly a 100W non-halogen incandescent bulb
             color: Color::ALICE_BLUE,
             shadows_enabled: true,
             ..Default::default()
@@ -151,7 +149,7 @@ fn setup(
     commands.spawn_bundle(PerspectiveCameraBundle {
         //transform: Transform::from_xyz(0., 10., 100.),
         transform: Transform {
-            translation: Vec3::new(0., 10., 100.),
+            translation: Vec3::new(0., 10., 200.),
             //rotation: Quat::from_rotation_z(90_f32.to_radians()),
             ..Default::default()
         },
@@ -194,7 +192,9 @@ fn setup(
             end_y: None,
             end_z: None,
         }),
+        particle_animation_options: Some(shimmer_animations()),
     };
 
-    Emitter::create(options, &mut commands, meshes, materials);
+    let total_elapsed_ms = time.time_since_startup().as_millis();
+    Emitter::create(options, &mut commands, meshes, total_elapsed_ms);
 }

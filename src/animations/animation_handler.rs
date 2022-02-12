@@ -1,12 +1,14 @@
+use bevy::prelude::Component;
+use rand::{thread_rng, Rng};
+
 use super::animation::{Animate, AnimationData, AnimationTime};
 use std::fmt::Debug;
 use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Component)]
 pub struct AnimationHandler {
     animation_offset_ms: u32,
-    iteration: u32,
-    animations: Rc<Vec<Box<dyn Animate>>>,
+    animations: Vec<Box<dyn Animate + Sync + Send>>,
     duration_ms: u32,
 }
 
@@ -16,9 +18,8 @@ pub enum StartAnimationAt {
     RangeMs(u32, u32),
 }
 
-#[derive(Debug)]
 pub struct AnimationOptions {
-    pub animations: Rc<Vec<Box<dyn Animate>>>,
+    pub animations: Vec<Box<dyn Animate + Sync + Send>>,
     pub duration_ms: u32,
     pub start_at: StartAnimationAt,
 }
@@ -30,37 +31,22 @@ impl Debug for StartAnimationAt {
 }
 
 impl AnimationHandler {
-    pub fn new(options: &Option<AnimationOptions>) -> Option<Self> {
-        match options {
-            Some(ah) => {
-                //let animation_offset_ms = match ah.start_at {
-                //StartAnimationAt::Zero => 0,
-                //StartAnimationAt::Random => rand::gen_range(0, ah.duration_ms),
-                //StartAnimationAt::RangeMs(start, end) => rand::gen_range(start, end),
-                //};
-                //Some(AnimationHandler {
-                //iteration: 0,
-                //animation_offset_ms,
-                //animations: Rc::clone(&ah.animations),
-                //duration_ms: ah.duration_ms,
-                //})
-                None
-            }
-            None => None,
+    pub fn new(options: AnimationOptions) -> Self {
+        let mut rng = thread_rng();
+        let animation_offset_ms = match options.start_at {
+            StartAnimationAt::Zero => 0,
+            StartAnimationAt::Random => rng.gen_range(0..options.duration_ms),
+            StartAnimationAt::RangeMs(start, end) => rng.gen_range(start..end),
+        };
+
+        AnimationHandler {
+            animation_offset_ms,
+            animations: options.animations,
+            duration_ms: options.duration_ms,
         }
     }
 
-    pub fn animate(&mut self, data: &mut AnimationData, elapsed_ms: u128) {
-        //let new_iteration = if elapsed_ms == 0 {
-        //0
-        //} else {
-        //self.duration_ms / elapsed_ms
-        //};
-
-        //if self.iteration < new_iteration {
-        //self.iteration = new_iteration;
-        //}
-
+    pub fn apply(&mut self, data: &mut AnimationData, elapsed_ms: u128) {
         let cycle_ms = (elapsed_ms as u32 + self.animation_offset_ms) % self.duration_ms;
 
         let time = AnimationTime {
@@ -78,12 +64,12 @@ impl AnimationOptions {
     pub fn new(
         duration_ms: u32,
         start_at: StartAnimationAt,
-        animations: Vec<Box<dyn Animate>>,
+        animations: Vec<Box<dyn Animate + Send + Sync>>,
     ) -> Self {
         Self {
             duration_ms,
             start_at,
-            animations: Rc::new(animations),
+            animations,
         }
     }
 }

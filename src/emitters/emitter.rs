@@ -2,26 +2,28 @@
 //use crate::animations::animation_handler::AnimationHandler;
 //use crate::animations::animation_handler::AnimationOptions;
 use crate::animations::animation::Animate;
+use crate::animations::animation::AnimationData;
+use crate::animations::animation_handler::AnimationHandler;
+use crate::animations::animation_handler::AnimationOptions;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::forces::force::ForceData;
-use crate::forces::force_handler;
 use crate::forces::force_handler::ForceHandler;
+use crate::instant_extensions::Elapsed;
 use crate::point::Degrees;
 use crate::point::Point;
 use crate::point::Radians;
 use bevy::core::FixedTimestep;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::LogDiagnosticsPlugin;
-use bevy::tasks::TaskPool;
+use bevy::utils::Instant;
 //use crate::trails::trail_animation::TrailData;
 //use crate::trails::trail_handler::TrailHandler;
-use crate::{position, Position};
+use crate::Position;
 use bevy::prelude::*;
 use rand::prelude::ThreadRng;
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use super::emitter_animation::EmitterData;
 
@@ -52,7 +54,7 @@ pub struct EmitterOptions {
     /// number between 0 and 1, e.g. 0.001
     pub particle_friction_coefficient: f32,
     pub bounds: Option<Bounds>,
-    //pub particle_animation_options: Option<AnimationOptions>,
+    pub particle_animation_options: Option<AnimationOptions>,
     //pub emitter_animation_handler: Option<EmitterAnimationHandler>,
     pub force_handler: Option<ForceHandler>,
     //pub trail_handler: Option<TrailHandler>,
@@ -73,8 +75,14 @@ pub struct Emitter;
 
 #[derive(Debug, Component)]
 struct LifeCycle {
-    lifetime: Arc<Instant>,
+    spawned_at: u128,
     duration_ms: u128,
+}
+
+impl LifeCycle {
+    pub fn elapsed_ms(&self, total_elapsed_ms: u128) -> u128 {
+        total_elapsed_ms - self.spawned_at
+    }
 }
 
 #[derive(Debug, Component)]
@@ -83,7 +91,7 @@ struct EmitOptions {
     angle_emission_radians: f32,
     diffusion_radians: Radians,
     particles_per_emission: u32,
-    delay_between_emission: u32,
+    delay_between_emission_ms: u32,
     iteration: i32,
     emission_distortion: f32,
     emitter_size: EmitterSize,
@@ -123,8 +131,8 @@ pub struct ParticleAttributes {
     friction_coefficient: f32,
 }
 
-pub struct Materials {
-    particle_color: Handle<StandardMaterial>,
+#[derive(Component)]
+pub struct Meshes {
     particle_mesh: Handle<Mesh>,
 }
 
@@ -141,8 +149,9 @@ impl Plugin for EmitterPlugin {
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(0.01667))
                 .with_system(transform_particle_system)
-                .with_system(update_emitter_system)
+                .with_system(spawn_particles_system)
                 .with_system(apply_forces_system)
+                .with_system(apply_animations_system)
                 .with_system(check_bounds_system),
         );
         //.add_plugin(LogDiagnosticsPlugin::default())
@@ -153,9 +162,10 @@ impl Plugin for EmitterPlugin {
 fn apply_forces_system(
     mut particles_query: Query<(&mut Velocity, &Transform, &ParticleAttributes), With<Particle>>,
     emitter_query: Query<(&ForceHandler, &Particles), With<Emitter>>,
+    time: Res<Time>,
 ) {
+    let elapsed_ms = time.time_since_startup().as_millis();
     for (force_handler, particles) in emitter_query.iter() {
-        let elapsed_ms = force_handler.lifetime.elapsed().as_millis();
         for &particle_entity in particles.0.iter() {
             if let Ok((mut velocity, transform, attributes)) =
                 particles_query.get_mut(particle_entity)
@@ -167,7 +177,7 @@ fn apply_forces_system(
                     vx: velocity.vx,
                     vy: velocity.vy,
                     vz: velocity.vz,
-                    radius: attributes.radius,
+                    radius: attributes.radius * transform.scale.x,
                     mass: attributes.radius,
                 };
 
@@ -176,6 +186,49 @@ fn apply_forces_system(
                 velocity.vx = data.vx;
                 velocity.vy = data.vy;
                 velocity.vz = data.vz;
+            }
+        }
+    }
+}
+
+fn apply_animations_system(
+    mut particles_query: Query<
+        (
+            &mut Velocity,
+            &Handle<StandardMaterial>,
+            &mut Transform,
+            &LifeCycle,
+        ),
+        With<Particle>,
+    >,
+    mut emitter_query: Query<(&mut AnimationHandler, &Particles), With<Emitter>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    time: Res<Time>,
+) {
+    let total_elapsed_ms = time.time_since_startup().as_millis();
+    for (mut animation_handler, particles) in emitter_query.iter_mut() {
+        for &particle_entity in particles.0.iter() {
+            if let Ok((mut velocity, handle, mut transform, life_cycle)) =
+                particles_query.get_mut(particle_entity)
+            {
+                let material = &mut materials.get_mut(handle).unwrap();
+
+                let mut data = AnimationData {
+                    color: &mut material.base_color,
+                    vx: velocity.vx,
+                    vy: velocity.vy,
+                    vz: velocity.vz,
+                    scale: transform.scale,
+                };
+
+                animation_handler.apply(&mut data, life_cycle.elapsed_ms(total_elapsed_ms));
+
+                velocity.vx = data.vx;
+                velocity.vy = data.vy;
+                velocity.vz = data.vz;
+                transform.scale = data.scale;
+                //println!("{}", data.color.g());
+                // TODO radius
             }
         }
     }
@@ -236,8 +289,15 @@ fn transform_particle_system(
         With<Particle>,
     >,
     mut commands: Commands,
+    time: Res<Time>,
 ) {
-    for (entity, mut speed, mut transform, cycle, attributes) in query.iter_mut() {
+    for (entity, mut speed, mut transform, life_cycle, attributes) in query.iter_mut() {
+        let total_elapsed_ms = time.time_since_startup().as_millis();
+        if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
+            commands.entity(entity).despawn();
+            continue;
+        }
+
         let x_force = speed.vx * attributes.mass;
         let y_force = speed.vy * attributes.mass;
         let z_force = speed.vz * attributes.mass;
@@ -253,15 +313,10 @@ fn transform_particle_system(
         transform.translation.x += speed.vx;
         transform.translation.y += speed.vy;
         transform.translation.z += speed.vz;
-
-        if cycle.duration_ms < cycle.lifetime.elapsed().as_millis() {
-            commands.entity(entity).despawn();
-        }
     }
 }
 
-// TODO materials as component for emitter instead of resource.
-fn update_emitter_system(
+fn spawn_particles_system(
     mut query: Query<
         (
             Entity,
@@ -270,32 +325,39 @@ fn update_emitter_system(
             &EmitterParticleAttributes,
             &Position,
             &mut Particles,
+            &Meshes,
         ),
         With<Emitter>,
     >,
     mut commands: Commands,
-    materials: Res<Materials>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    time: Res<Time>,
 ) {
-    for (entity, cycle, mut emit_options, particle, position, mut particles) in query.iter_mut() {
-        let elapsed_ms = cycle.lifetime.elapsed().as_millis();
-        let overdue = elapsed_ms > cycle.duration_ms;
+    for (
+        entity,
+        life_cycle,
+        mut emit_options,
+        particle_attributes,
+        position,
+        mut particles,
+        meshes,
+    ) in query.iter_mut()
+    {
+        let total_elapsed_ms = time.time_since_startup().as_millis();
+        let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
+        let overdue = life_cycle.duration_ms < elapsed_ms;
+        let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
 
-        if overdue {
-            commands.entity(entity).despawn();
-            return;
-        }
-
-        let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission as i32;
-
-        if new_iteration == emit_options.iteration {
+        if overdue || new_iteration == emit_options.iteration {
+            if particles.0.is_empty() {
+                commands.entity(entity).despawn();
+            }
             return;
         }
 
         emit_options.iteration = new_iteration;
 
         let mut rng = thread_rng();
-
-        let lifetime = Arc::new(Instant::now());
 
         for _ in 0..emit_options.particles_per_emission {
             let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
@@ -305,45 +367,43 @@ fn update_emitter_system(
             let Point(elevation, bearing) = emit_options.angle_radians;
             let x = (position.x + distortion) + emitter_length * elevation.cos() * bearing.cos();
             let y = (position.y + distortion) + emitter_length * elevation.sin() * bearing.cos();
-            let z = (position.z + distortion) + emitter_depth + emitter_length * bearing.sin();
+            let z = (position.z + distortion + emitter_depth) + emitter_length * bearing.sin();
 
             let diffusion_elevation_delta =
                 gen_dyn_range(&mut rng, emit_options.diffusion_radians.0);
             let bearing_radians = gen_dyn_range(&mut rng, emit_options.diffusion_radians.1);
             let elevation_radians = emit_options.angle_emission_radians + diffusion_elevation_delta;
 
-            let vx = particle.speed * elevation_radians.cos() * bearing_radians.cos();
-            let vy = particle.speed * elevation_radians.sin() * bearing_radians.cos();
-            let vz = particle.speed * bearing_radians.sin();
+            let vx = particle_attributes.speed * elevation_radians.cos() * bearing_radians.cos();
+            let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
+            let vz = particle_attributes.speed * bearing_radians.sin();
 
-            //let animation_handler = AnimationHandler::new(&self.particle_animation_options);
             let bundle = PbrBundle {
-                mesh: materials.particle_mesh.clone(),
-                material: materials.particle_color.clone(),
+                material: materials.add(particle_attributes.color.into()),
+                mesh: meshes.particle_mesh.clone(),
                 transform: Transform {
                     translation: Vec3::new(x, y, z),
-                    //scale: Vec3::new(0.1, 0.1, 0.1),
                     ..Default::default()
                 },
                 ..Default::default()
             };
 
             let speed = Velocity { vx, vy, vz };
-            let cycle = LifeCycle {
-                lifetime: lifetime.clone(),
-                duration_ms: particle.duration_ms,
+            let life_cycle = LifeCycle {
+                spawned_at: total_elapsed_ms,
+                duration_ms: particle_attributes.duration_ms,
             };
 
             let attributes = ParticleAttributes {
-                friction_coefficient: particle.friction_coefficient,
-                radius: particle.radius,
-                mass: particle.mass,
+                friction_coefficient: particle_attributes.friction_coefficient,
+                radius: particle_attributes.radius,
+                mass: particle_attributes.mass,
             };
 
             let id = commands
                 .spawn()
                 .insert_bundle(bundle)
-                .insert_bundle((speed, cycle, attributes, Particle))
+                .insert_bundle((speed, life_cycle, attributes, Particle))
                 .id();
 
             particles.0.push(id);
@@ -356,7 +416,7 @@ impl Emitter {
         options: EmitterOptions,
         commands: &mut Commands,
         mut meshes: ResMut<Assets<Mesh>>,
-        mut materials: ResMut<Assets<StandardMaterial>>,
+        elapsed_ms: u128,
     ) {
         let EmitterOptions {
             emitter_position,
@@ -374,7 +434,7 @@ impl Emitter {
             particle_speed,
             particle_friction_coefficient,
             bounds,
-            //emitter_animation_handler,
+            particle_animation_options,
             force_handler,
         } = options;
 
@@ -384,7 +444,7 @@ impl Emitter {
         let emit_options = EmitOptions {
             particles_per_emission,
             diffusion_radians: diffusion_degrees.to_radians(),
-            delay_between_emission,
+            delay_between_emission_ms: delay_between_emission,
             iteration: -1,
             angle_radians,
             angle_emission_radians,
@@ -394,7 +454,7 @@ impl Emitter {
 
         let emit_time = LifeCycle {
             duration_ms: emitter_duration.as_millis(),
-            lifetime: Arc::new(Instant::now()),
+            spawned_at: elapsed_ms,
         };
 
         let spawn_options = EmitterParticleAttributes {
@@ -406,13 +466,14 @@ impl Emitter {
             mass: particle_mass,
         };
 
-        commands.insert_resource(Materials {
-            particle_color: materials.add(particle_color.into()),
+        let meshes = Meshes {
             particle_mesh: meshes.add(Mesh::from(shape::Icosphere {
                 radius: particle_radius,
                 ..Default::default()
             })),
-        });
+        };
+
+        let particles = Particles(Vec::new());
 
         let mut builder = commands.spawn();
         builder
@@ -420,7 +481,8 @@ impl Emitter {
             .insert(emit_time)
             .insert(emitter_position)
             .insert(spawn_options)
-            .insert(Particles(Vec::new()))
+            .insert(meshes)
+            .insert(particles)
             .insert(Emitter);
 
         if let Some(bounds) = bounds {
@@ -429,6 +491,10 @@ impl Emitter {
 
         if let Some(force_handler) = force_handler {
             builder.insert(force_handler);
+        }
+
+        if let Some(options) = particle_animation_options {
+            builder.insert(AnimationHandler::new(options));
         }
     }
 
@@ -487,35 +553,6 @@ impl Emitter {
     //let y = (self.position.y + distortion) + emitter_position * self.angle_radians.sin();
     //let z = 0.;
 
-    //let diffusion_delta = gen_dyn_range(&mut rng, self.diffusion_radians);
-    //let angle_radians = self.angle_emission_radians + diffusion_delta;
-    //let vx = self.particle_speed * angle_radians.cos();
-    //let vy = self.particle_speed * angle_radians.sin();
-
-    ////let animation_handler = AnimationHandler::new(&self.particle_animation_options);
-
-    //let speed = Speed { vx, vy, vz: 0. };
-
-    //commands
-    //.spawn_bundle(PbrBundle {
-    //mesh: meshes.add(Mesh::from(shape::Icosphere {
-    //radius: self.particle_radius,
-    //..Default::default()
-    //})),
-    //material: materials.add(self.particle_color.into()),
-    //transform: Transform {
-    //translation: Vec3::new(x, y, z),
-    ////scale: Vec3::new(0.1, 0.1, 0.1),
-    //..Default::default()
-    //},
-    //..Default::default()
-    //})
-    //.insert(speed)
-    //.insert(Particle);
-
-    ////self.particles.push(particle);
-    //}
-
     ////self.animate_emitter(emitter_elapsed_ms);
     ////self.update_particles(emitter_elapsed_ms);
 
@@ -530,41 +567,7 @@ impl Emitter {
     //for i in (0..self.particles.len()).rev() {
     //let mut particle = self.particles.swap_remove(i);
 
-    ////if let Some(force_handler) = &mut self.force_handler {
-    ////let mut data = ForceData {
-    ////x: particle.x,
-    ////y: particle.y,
-    ////vx,
-    ////vy,
-    ////radius: self.particle_radius,
-    ////mass: self.particle_mass,
-    ////};
-
-    ////force_handler.apply(&mut data, emitter_elapsed_ms);
-
-    ////particle.vx = data.vx;
-    ////particle.vy = data.vy;
-    ////} else {
-    //particle.vx = vx;
-    //particle.vy = vy;
-    ////}
-
     ////let particle_elapsed_ms = particle.lifetime.elapsed().as_millis();
-
-    ////if let Some(animation_handler) = &mut particle.animation_handler {
-    ////let mut data: AnimationData = AnimationData {
-    ////radius: particle.radius,
-    ////color: particle.color,
-    ////vx: particle.vx,
-    ////vy: particle.vy,
-    ////};
-
-    ////animation_handler.animate(&mut data, particle_elapsed_ms);
-    ////particle.vx = data.vx;
-    ////particle.vy = data.vy;
-    ////particle.color = data.color;
-    ////particle.radius = data.radius;
-    ////}
 
     ////particle.position.x += particle.vx;
     ////particle.position.y += particle.vy;
@@ -591,25 +594,6 @@ impl Emitter {
     ////};
     ////} else {
     ////}
-
-    ////let diameter = particle.radius * 2.;
-
-    ////if let Some(bounds) = &self.bounds {
-    ////let position = &mut particle.position;
-    ////if position.x < bounds.start_x
-    ////|| bounds.end_x < position.x + diameter
-    ////|| position.y < bounds.start_y
-    ////|| bounds.end_y < position.y + diameter
-    ////|| position.z < bounds.start_z
-    ////|| bounds.end_z < position.z + diameter
-    ////{
-    ////continue; // removes particle.
-    ////}
-    ////} else if particle_elapsed_ms <= self.particle_lifetime_ms {
-    ////self.particles.push(particle);
-    ////}
-    //}
-    //}
 }
 
 fn gen_dyn_range(rng: &mut ThreadRng, val: f32) -> f32 {

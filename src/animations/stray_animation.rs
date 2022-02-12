@@ -1,3 +1,6 @@
+use rand::thread_rng;
+use rand::Rng;
+
 use super::animation::Animate;
 use super::animation::AnimationData;
 use super::animation::AnimationTime;
@@ -24,8 +27,9 @@ impl Animate for StrayAnimation {
             return;
         }
 
-        //let stray = rand::gen_range(-self.strayness_radians, self.strayness_radians);
-        //data.vx = (data.vx * stray.cos()) - (data.vy * stray.sin());
-        //data.vy = (data.vx * stray.sin()) + (data.vy * stray.cos());
+        let mut rng = thread_rng();
+        let stray = rng.gen_range(-self.strayness_radians..self.strayness_radians);
+        data.vx = (data.vx * stray.cos()) - (data.vy * stray.sin());
+        data.vy = (data.vx * stray.sin()) + (data.vy * stray.cos());
     }
 }

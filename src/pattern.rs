@@ -28,23 +28,30 @@ use std::time::Duration;
 use crate::position::Position;
 
 pub fn shimmer_animations() -> AnimationOptions {
-    let mut animations: Vec<Box<dyn Animate>> = Vec::new();
+    let mut animations: Vec<Box<dyn Animate + Sync + Send>> = Vec::new();
+
+    animations.push(Box::new(DuoColorAnimation {
+        color_from: Color::rgba(0.5, 1., 0.5, 1.),
+        color_to: Color::rgba(0., 0., 1., 1.),
+        from_ms: 1000,
+        until_ms: 3000,
+    }));
 
     //animations.push(Box::new(DuoColorAnimation {
-    //color_from: Color::rgb(1., 1., 1.),
-    //color_to: Color::from_rgba(255, 255, 255, 0),
-    //from_ms: 1000,
-    //until_ms: 2000,
-    //}));
-
-    //animations.push(Box::new(DuoColorAnimation {
-    //color_from: Color::from_rgba(255, 255, 255, 0),
-    //color_to: Color::from_rgba(255, 255, 255, 255),
+    //color_from: Color::rgba(0., 0., 1., 1.),
+    //color_to: Color::rgba(0., 0., 1., 1.),
     //from_ms: 3000,
     //until_ms: 4000,
     //}));
 
-    AnimationOptions::new(4000, StartAnimationAt::RangeMs(0, 1000), animations)
+    animations.push(Box::new(SizeAnimation {
+        from_ms: 0,
+        until_ms: 5500,
+        start_scale: 1.,
+        end_scale: 1.5,
+    }));
+
+    AnimationOptions::new(5000, StartAnimationAt::RangeMs(0, 1000), animations)
 }
 
 pub fn trail_animation() -> TrailHandler {
