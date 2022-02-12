@@ -167,7 +167,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             depth: 8.,
         },
         emitter_duration: Duration::from_secs(10),
-        angle_degrees: Point(10., 10.),
+        angle_degrees: Point(0., 0.),
         diffusion_degrees: Point(60., 10.),
         emission_distortion: 0.,
         particle_color: Color::Rgba {

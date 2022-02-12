@@ -114,11 +114,11 @@ struct Particles(Vec<Entity>);
 //#[derive(Component)]
 //struct Animations(Vec<Box<dyn Animate + Sync + Send>>);
 
-#[derive(Debug, Component)]
-struct Velocity {
-    vx: f32,
-    vy: f32,
-    vz: f32,
+#[derive(Component)]
+pub struct Velocity {
+    pub vx: f32,
+    pub vy: f32,
+    pub vz: f32,
 }
 
 #[derive(Debug, Component)]
@@ -158,12 +158,14 @@ impl Plugin for EmitterPlugin {
 
 fn apply_forces_system(
     mut particles_query: Query<(&mut Velocity, &Transform, &ParticleAttributes), With<Particle>>,
-    emitter_query: Query<(&ForceHandler, &Particles), With<Emitter>>,
+    emitter_query: Query<(&ForceHandler, &Particles, &LifeCycle), With<Emitter>>,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (force_handler, particles) in emitter_query.iter() {
+    for (force_handler, particles, life_cycle) in emitter_query.iter() {
+        let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
+
         for &particle_entity in particles.0.iter() {
             if let Ok((mut velocity, transform, attributes)) =
                 particles_query.get_mut(particle_entity)
@@ -179,7 +181,7 @@ fn apply_forces_system(
                     mass: attributes.radius,
                 };
 
-                force_handler.apply(&mut data, total_elapsed_ms);
+                force_handler.apply(&mut data, elapsed_ms);
 
                 velocity.vx = data.vx;
                 velocity.vy = data.vy;
@@ -214,20 +216,11 @@ fn apply_animations_system(
 
                 let mut data = AnimationData {
                     color: &mut material.base_color,
-                    vx: velocity.vx,
-                    vy: velocity.vy,
-                    vz: velocity.vz,
-                    scale: transform.scale,
+                    scale: &mut transform.scale,
+                    velocity: &mut velocity,
                 };
 
                 animation_handler.apply(&mut data, life_cycle.elapsed_ms(total_elapsed_ms));
-
-                velocity.vx = data.vx;
-                velocity.vy = data.vy;
-                velocity.vz = data.vz;
-                transform.scale = data.scale;
-                //println!("{}", data.color.g());
-                // TODO radius
             }
         }
     }

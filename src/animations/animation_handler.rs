@@ -3,7 +3,6 @@ use rand::{thread_rng, Rng};
 
 use super::animation::{Animate, AnimationData, AnimationTime};
 use std::fmt::Debug;
-use std::rc::Rc;
 
 #[derive(Component)]
 pub struct AnimationHandler {

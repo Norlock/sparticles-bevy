@@ -1,3 +1,4 @@
+use crate::emitters::emitter::Velocity;
 use bevy::math::Vec3;
 use bevy::render::color::Color;
 use std::fmt::Debug;
@@ -19,10 +20,8 @@ impl Debug for dyn Animate {
     }
 }
 
-pub struct AnimationData<'a> {
+pub struct AnimationData<'a, 'b, 'c> {
     pub color: &'a mut Color,
-    pub scale: Vec3,
-    pub vx: f32,
-    pub vy: f32,
-    pub vz: f32,
+    pub scale: &'b mut Vec3,
+    pub velocity: &'c mut Velocity,
 }

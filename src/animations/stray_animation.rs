@@ -28,8 +28,12 @@ impl Animate for StrayAnimation {
         }
 
         let mut rng = thread_rng();
-        let stray = rng.gen_range(-self.strayness_radians..self.strayness_radians);
-        data.vx = (data.vx * stray.cos()) - (data.vy * stray.sin());
-        data.vy = (data.vx * stray.sin()) + (data.vy * stray.cos());
+        let stray_elevation = rng.gen_range(-self.strayness_radians..self.strayness_radians);
+        let stray_bearing = rng.gen_range(-self.strayness_radians..self.strayness_radians);
+
+        let velocity = &mut data.velocity;
+        velocity.vx = (velocity.vx * stray_elevation.cos()) - (velocity.vy * stray_elevation.sin());
+        velocity.vy = (velocity.vx * stray_elevation.sin()) + (velocity.vy * stray_elevation.cos());
+        velocity.vz *= stray_bearing.sin();
     }
 }

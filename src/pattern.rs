@@ -44,12 +44,14 @@ pub fn shimmer_animations() -> AnimationOptions {
     //until_ms: 4000,
     //}));
 
-    animations.push(Box::new(SizeAnimation {
-        from_ms: 0,
-        until_ms: 5500,
-        start_scale: 1.,
-        end_scale: 1.5,
-    }));
+    animations.push(Box::new(StrayAnimation::new(3000, 5000, 3.)));
+
+    //animations.push(Box::new(SizeAnimation {
+    //from_ms: 4000,
+    //until_ms: 5000,
+    //start_scale: 1.,
+    //end_scale: 2.,
+    //}));
 
     AnimationOptions::new(5000, StartAnimationAt::RangeMs(0, 1000), animations)
 }
@@ -340,30 +342,19 @@ pub fn random_forces() -> Option<ForceHandler> {
     force_handler.add(Box::new(AcceleratingForce {
         from_ms: 0,
         until_ms: 1000,
-        nx: 0.011,
-        ny: 0.01,
-        nz: 0.03,
+        nx: 0.022,
+        ny: 0.02,
+        nz: 0.,
         max_vx: 0.2,
         max_vy: 0.2,
-        max_vz: 0.4,
+        max_vz: 0.,
     }));
 
     force_handler.add(Box::new(AcceleratingForce {
         from_ms: 2_000,
         until_ms: 3_000,
         nx: 0.01,
-        ny: -0.011,
-        nz: 0.,
-        max_vx: -0.2,
-        max_vy: -0.2,
-        max_vz: 0.,
-    }));
-
-    force_handler.add(Box::new(AcceleratingForce {
-        from_ms: 3_000,
-        until_ms: 4_000,
-        nx: -0.01,
-        ny: -0.011,
+        ny: -0.004,
         nz: 0.,
         max_vx: -0.2,
         max_vy: -0.2,
