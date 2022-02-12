@@ -8,21 +8,18 @@ use crate::animations::animation_handler::AnimationOptions;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::forces::force::ForceData;
 use crate::forces::force_handler::ForceHandler;
-use crate::instant_extensions::Elapsed;
 use crate::point::Degrees;
 use crate::point::Point;
 use crate::point::Radians;
 use bevy::core::FixedTimestep;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::LogDiagnosticsPlugin;
-use bevy::utils::Instant;
 //use crate::trails::trail_animation::TrailData;
 //use crate::trails::trail_handler::TrailHandler;
 use crate::Position;
 use bevy::prelude::*;
 use rand::prelude::ThreadRng;
 use rand::{thread_rng, Rng};
-use std::sync::Arc;
 use std::time::Duration;
 
 use super::emitter_animation::EmitterData;
@@ -152,7 +149,7 @@ impl Plugin for EmitterPlugin {
                 .with_system(spawn_particles_system)
                 .with_system(apply_forces_system)
                 .with_system(apply_animations_system)
-                .with_system(check_bounds_system),
+                .with_system(remove_particles_system),
         );
         //.add_plugin(LogDiagnosticsPlugin::default())
         //.add_plugin(FrameTimeDiagnosticsPlugin::default())
@@ -164,7 +161,8 @@ fn apply_forces_system(
     emitter_query: Query<(&ForceHandler, &Particles), With<Emitter>>,
     time: Res<Time>,
 ) {
-    let elapsed_ms = time.time_since_startup().as_millis();
+    let total_elapsed_ms = time.time_since_startup().as_millis();
+
     for (force_handler, particles) in emitter_query.iter() {
         for &particle_entity in particles.0.iter() {
             if let Ok((mut velocity, transform, attributes)) =
@@ -181,7 +179,7 @@ fn apply_forces_system(
                     mass: attributes.radius,
                 };
 
-                force_handler.apply(&mut data, elapsed_ms);
+                force_handler.apply(&mut data, total_elapsed_ms);
 
                 velocity.vx = data.vx;
                 velocity.vy = data.vy;
@@ -206,6 +204,7 @@ fn apply_animations_system(
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
+
     for (mut animation_handler, particles) in emitter_query.iter_mut() {
         for &particle_entity in particles.0.iter() {
             if let Ok((mut velocity, handle, mut transform, life_cycle)) =
@@ -234,43 +233,56 @@ fn apply_animations_system(
     }
 }
 
-fn check_bounds_system(
-    mut particles_query: Query<(&Transform, &ParticleAttributes), With<Particle>>,
-    emitter_query: Query<(&Bounds, &Particles), With<Emitter>>,
+fn remove_particles_system(
+    mut particles_query: Query<(&Transform, &ParticleAttributes, &LifeCycle), With<Particle>>,
+    emitter_query: Query<(Option<&Bounds>, &Particles), With<Emitter>>,
     mut commands: Commands,
+    time: Res<Time>,
 ) {
+    let total_elapsed_ms = time.time_since_startup().as_millis();
+
     for (bounds, particles) in emitter_query.iter() {
         for &particle_entity in particles.0.iter() {
-            if let Ok((transform, attributes)) = particles_query.get_mut(particle_entity) {
+            if let Ok((transform, attributes, life_cycle)) =
+                particles_query.get_mut(particle_entity)
+            {
+                if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
+                    commands.entity(particle_entity).despawn();
+                    continue;
+                }
+
                 let translation = &transform.translation;
                 let diameter = attributes.radius * 2.;
 
-                let below_x = bounds
-                    .start_x
-                    .map_or(false, |start_x| translation.x < start_x);
+                if let Some(bounds) = bounds {
+                    let below_x = bounds
+                        .start_x
+                        .map_or(false, |start_x| translation.x < start_x);
 
-                let below_y = bounds
-                    .start_y
-                    .map_or(false, |start_y| translation.y < start_y);
+                    let below_y = bounds
+                        .start_y
+                        .map_or(false, |start_y| translation.y < start_y);
 
-                let below_z = bounds
-                    .start_z
-                    .map_or(false, |start_z| translation.z < start_z);
+                    let below_z = bounds
+                        .start_z
+                        .map_or(false, |start_z| translation.z < start_z);
 
-                let above_x = bounds
-                    .end_x
-                    .map_or(false, |end_x| end_x < translation.x + diameter);
+                    let above_x = bounds
+                        .end_x
+                        .map_or(false, |end_x| end_x < translation.x + diameter);
 
-                let above_y = bounds
-                    .end_y
-                    .map_or(false, |end_y| end_y < translation.y + diameter);
+                    let above_y = bounds
+                        .end_y
+                        .map_or(false, |end_y| end_y < translation.y + diameter);
 
-                let above_z = bounds
-                    .end_z
-                    .map_or(false, |end_z| end_z < translation.z + diameter);
+                    let above_z = bounds
+                        .end_z
+                        .map_or(false, |end_z| end_z < translation.z + diameter);
 
-                if below_x || below_y || below_z || above_x || above_y || above_z {
-                    commands.entity(particle_entity).despawn();
+                    if below_x || below_y || below_z || above_x || above_y || above_z {
+                        commands.entity(particle_entity).despawn();
+                        continue;
+                    }
                 }
             }
         }
@@ -278,26 +290,9 @@ fn check_bounds_system(
 }
 
 fn transform_particle_system(
-    mut query: Query<
-        (
-            Entity,
-            &mut Velocity,
-            &mut Transform,
-            &LifeCycle,
-            &ParticleAttributes,
-        ),
-        With<Particle>,
-    >,
-    mut commands: Commands,
-    time: Res<Time>,
+    mut query: Query<(&mut Velocity, &mut Transform, &ParticleAttributes), With<Particle>>,
 ) {
-    for (entity, mut speed, mut transform, life_cycle, attributes) in query.iter_mut() {
-        let total_elapsed_ms = time.time_since_startup().as_millis();
-        if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
-            commands.entity(entity).despawn();
-            continue;
-        }
-
+    for (mut speed, mut transform, attributes) in query.iter_mut() {
         let x_force = speed.vx * attributes.mass;
         let y_force = speed.vy * attributes.mass;
         let z_force = speed.vz * attributes.mass;
@@ -319,13 +314,13 @@ fn transform_particle_system(
 fn spawn_particles_system(
     mut query: Query<
         (
-            Entity,
             &LifeCycle,
             &mut EmitOptions,
             &EmitterParticleAttributes,
             &Position,
             &mut Particles,
             &Meshes,
+            Entity,
         ),
         With<Emitter>,
     >,
@@ -333,25 +328,28 @@ fn spawn_particles_system(
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
 ) {
+    let total_elapsed_ms = time.time_since_startup().as_millis();
+
     for (
-        entity,
         life_cycle,
         mut emit_options,
         particle_attributes,
         position,
         mut particles,
         meshes,
+        entity,
     ) in query.iter_mut()
     {
-        let total_elapsed_ms = time.time_since_startup().as_millis();
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
-        let overdue = life_cycle.duration_ms < elapsed_ms;
+        let out_of_time = life_cycle.duration_ms < elapsed_ms;
         let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
 
-        if overdue || new_iteration == emit_options.iteration {
+        if out_of_time {
             if particles.0.is_empty() {
                 commands.entity(entity).despawn();
             }
+            return;
+        } else if new_iteration == emit_options.iteration {
             return;
         }
 

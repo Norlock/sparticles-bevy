@@ -176,7 +176,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             blue: 0.5,
             alpha: 1.,
         },
-        particles_per_emission: 10,
+        particles_per_emission: 20,
         delay_between_emission_ms: 100,
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.3,
@@ -184,14 +184,15 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         particle_speed: 0.3,
         particle_friction_coefficient: 0.005,
         force_handler: random_forces(),
-        bounds: Some(Bounds {
-            start_x: None,
-            start_y: Some(0.),
-            start_z: None,
-            end_x: None,
-            end_y: None,
-            end_z: None,
-        }),
+        bounds: None,
+        //bounds: Some(Bounds {
+        //start_x: None,
+        //start_y: Some(0.),
+        //start_z: None,
+        //end_x: None,
+        //end_y: None,
+        //end_z: None,
+        //}),
         particle_animation_options: Some(shimmer_animations()),
     };
 
