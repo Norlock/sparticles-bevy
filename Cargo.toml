@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.6", features = ["dynamic", "wayland"] }
-bevy_config_cam = { version = "0.2.0"} # <-- 
 tracing = "0.1"
 rand = "0.8"
 

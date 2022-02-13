@@ -370,7 +370,7 @@ fn spawn_particles_system(
 
             let bundle = PbrBundle {
                 material: materials.add(StandardMaterial {
-                    base_color: particle_attributes.color.into(),
+                    base_color: particle_attributes.color,
                     alpha_mode: AlphaMode::Blend,
                     ..Default::default()
                 }),

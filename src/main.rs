@@ -4,10 +4,8 @@ use crate::emitters::emitter::EmitterSize;
 use crate::pattern::random_forces;
 use crate::pattern::shimmer_animations;
 use crate::point::Point;
-use bevy_config_cam::ConfigCam;
-use bevy_config_cam::MovementSettings;
-use bevy_config_cam::PlayerSettings;
-use dev_ui::DevUIPlugin;
+use dev::dev_camera::DevCameraPlugin;
+use dev::dev_ui::DevUIPlugin;
 use emitters::emitter::Bounds;
 use std::time::Duration;
 
@@ -22,7 +20,7 @@ mod collision;
 mod emitters;
 mod instant_extensions;
 //mod fill_style;
-mod dev_ui;
+mod dev;
 mod forces;
 mod grid;
 //mod movement_handler;
@@ -102,6 +100,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.)))
         .add_plugins(DefaultPlugins)
         .add_plugin(DevUIPlugin)
+        .add_plugin(DevCameraPlugin)
         .add_plugin(EmitterPlugin)
         .run();
 }
@@ -120,7 +119,6 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
     //});
 
     commands.spawn_bundle(PointLightBundle {
-        // transform: Transform::from_xyz(5.0, 8.0, 2.0),
         transform: Transform::from_xyz(1.0, 2.0, 0.0),
         point_light: PointLight {
             intensity: 3000.0, // lumens - roughly a 100W non-halogen incandescent bulb
@@ -137,15 +135,15 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         brightness: 0.5,
     });
 
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        //transform: Transform::from_xyz(0., 10., 100.),
-        transform: Transform {
-            translation: Vec3::new(0., 10., 200.),
-            //rotation: Quat::from_rotation_z(90_f32.to_radians()),
-            ..Default::default()
-        },
-        ..Default::default()
-    });
+    //commands.spawn_bundle(PerspectiveCameraBundle {
+    ////transform: Transform::from_xyz(0., 10., 100.),
+    //transform: Transform {
+    //translation: Vec3::new(0., 0., 200.),
+    ////rotation: Quat::from_rotation_z(90_f32.to_radians()),
+    //..Default::default()
+    //},
+    //..Default::default()
+    //});
 
     //commands.insert_resource(grid);
     commands.spawn_bundle(UiCameraBundle::default());
