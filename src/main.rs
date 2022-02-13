@@ -165,7 +165,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             red: 0.5,
             green: 1.0,
             blue: 0.5,
-            alpha: 1.,
+            alpha: 1.0,
         },
         particles_per_emission: 5,
         delay_between_emission_ms: 100,

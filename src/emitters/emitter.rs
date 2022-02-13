@@ -369,7 +369,11 @@ fn spawn_particles_system(
             let vz = particle_attributes.speed * bearing_radians.sin();
 
             let bundle = PbrBundle {
-                material: materials.add(particle_attributes.color.into()),
+                material: materials.add(StandardMaterial {
+                    base_color: particle_attributes.color.into(),
+                    alpha_mode: AlphaMode::Blend,
+                    ..Default::default()
+                }),
                 mesh: meshes.particle_mesh.clone(),
                 transform: Transform {
                     translation: Vec3::new(x, y, z),

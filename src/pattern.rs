@@ -36,12 +36,19 @@ pub fn shimmer_animations() -> AnimationOptions {
         until_ms: 3000,
     }));
 
-    //animations.push(Box::new(DuoColorAnimation {
-    //color_from: Color::rgba(0., 0., 1., 1.),
-    //color_to: Color::rgba(0., 0., 1., 1.),
-    //from_ms: 3000,
-    //until_ms: 4000,
-    //}));
+    animations.push(Box::new(DuoColorAnimation {
+        color_from: Color::rgba(0., 0., 1., 1.),
+        color_to: Color::rgba(0., 0., 1., 0.),
+        from_ms: 3000,
+        until_ms: 4000,
+    }));
+
+    animations.push(Box::new(DuoColorAnimation {
+        color_from: Color::rgba(0., 0., 1., 0.),
+        color_to: Color::rgba(0., 0., 1., 1.),
+        from_ms: 4000,
+        until_ms: 5000,
+    }));
 
     animations.push(Box::new(StrayAnimation::new(0, 5000, 5.)));
 
