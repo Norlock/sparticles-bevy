@@ -47,15 +47,18 @@ impl Animate for StrayAnimation {
         //);
         //println!("sb {}", speed.sqrt());
 
-        let bearing_vx = velocity.vx * bearing.cos() + velocity.vz * bearing.sin()
-            - velocity.vy * bearing.sin()
-            - velocity.vz * bearing.sin();
-        let bearing_vy = velocity.vy * bearing.cos()
-            + velocity.vz * bearing.sin()
-            + velocity.vx * bearing.sin()
-            + velocity.vz * bearing.sin();
+        let bearing_sin = bearing.sin();
+        let bearing_cos = bearing.cos();
+
+        let bearing_vx = velocity.vx * bearing_cos + velocity.vz * bearing_sin
+            - velocity.vy * bearing_sin
+            - velocity.vz * bearing_sin;
+        let bearing_vy = velocity.vy * bearing_cos
+            + velocity.vz * bearing_sin
+            + velocity.vx * bearing_sin
+            + velocity.vz * bearing_sin;
         let bearing_vz =
-            velocity.vz * bearing.cos() - velocity.vy * bearing.sin() - velocity.vx * bearing.sin();
+            velocity.vz * bearing_cos - velocity.vy * bearing_sin - velocity.vx * bearing_sin;
 
         velocity.vy = bearing_vy;
         velocity.vz = bearing_vz;

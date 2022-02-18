@@ -2,7 +2,7 @@ use crate::forces::force::ForceData;
 use crate::forces::force_handler::ForceHandler;
 use crate::particle::Particle;
 use bevy::prelude::*;
-use std::{rc::Rc, time::Instant};
+use std::time::Instant;
 
 use crate::position::Position;
 

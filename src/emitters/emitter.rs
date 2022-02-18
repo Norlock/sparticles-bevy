@@ -1,13 +1,13 @@
 //use crate::animations::animation::AnimationData;
 //use crate::animations::animation_handler::AnimationHandler;
 //use crate::animations::animation_handler::AnimationOptions;
+use crate::angles::Angles;
 use crate::animations::animation::AnimationData;
 use crate::animations::animation_handler::AnimationHandler;
 use crate::animations::animation_handler::AnimationOptions;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::forces::force::ForceData;
 use crate::forces::force_handler::ForceHandler;
-use crate::point::Angles;
 use bevy::core::FixedTimestep;
 //use crate::trails::trail_animation::TrailData;
 //use crate::trails::trail_handler::TrailHandler;
@@ -111,9 +111,6 @@ pub struct Particle;
 #[derive(Debug, Component)]
 struct Particles(Vec<Entity>);
 
-//#[derive(Component)]
-//struct Animations(Vec<Box<dyn Animate + Sync + Send>>);
-
 #[derive(Component)]
 pub struct Velocity {
     pub vx: f32,
@@ -133,10 +130,7 @@ pub struct Meshes {
     particle_mesh: Handle<Mesh>,
 }
 
-//trail_handler: Option<TrailHandler>,
-//animation_handler: Option<AnimationHandler>,
-
-const EMIT_RADIANS: f32 = 90_f32 * (std::f32::consts::PI / 181.0f32); // 0 deg will be emitting above
+const EMIT_RADIANS: f32 = 90_f32 * (std::f32::consts::PI / 180_f32); // 0 deg will be emitting above
 
 pub struct EmitterPlugin;
 
@@ -152,8 +146,6 @@ impl Plugin for EmitterPlugin {
                 .with_system(remove_particles_system)
                 .with_system(animate_emitter_system),
         );
-        //.add_plugin(LogDiagnosticsPlugin::default())
-        //.add_plugin(FrameTimeDiagnosticsPlugin::default())
     }
 }
 
@@ -358,7 +350,9 @@ fn spawn_particles_system(
             let distortion = gen_dyn_range(&mut rng, emit_options.emission_distortion);
 
             let Angles { elevation, bearing } = emit_options.angle_radians;
-            let x = (position.x + distortion) + emitter_length * elevation.cos() * bearing.cos();
+            // Used to emit perpendicular of emitter.
+            let perpendicular = elevation.cos() * -1.;
+            let x = (position.x + distortion) + emitter_length * perpendicular * bearing.cos();
             let y = (position.y + distortion) + emitter_length * elevation.sin() * bearing.cos();
             let z = (position.z + distortion + emitter_depth) + emitter_length * bearing.sin();
 
@@ -368,7 +362,9 @@ fn spawn_particles_system(
             let elevation_radians =
                 emit_options.angle_emission_radians() + diffusion_elevation_delta;
 
-            let vx = particle_attributes.speed * elevation_radians.cos() * bearing_radians.cos();
+            // Used to emit perpendicular of emitter.
+            let perpendicular = elevation_radians.cos() * -1.;
+            let vx = particle_attributes.speed * perpendicular * bearing_radians.cos();
             let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
             let vz = particle_attributes.speed * bearing_radians.sin();
 
@@ -466,13 +462,11 @@ impl Emitter {
             force_handler,
         } = options;
 
-        let angle_radians = angle_degrees.to_radians();
-
         let emit_options = EmitOptions {
             particles_per_emission,
             diffusion_radians: diffusion_degrees.to_radians(),
+            angle_radians: angle_degrees.to_radians(),
             delay_between_emission_ms,
-            angle_radians,
             emission_distortion,
             emitter_size,
         };

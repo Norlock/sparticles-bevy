@@ -231,19 +231,19 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //stray_radians: 2_f32.to_radians(),
     //});
 
-    //let color_1 = Box::new(EmitColorAnimation {
-    //from_ms: 1000,
-    //until_ms: 3000,
-    //from_color: Color::rgb(0. / 255., 100. / 255., 155. / 255.),
-    //to_color: Color::rgb(0. / 255., 135. / 255., 100. / 255.),
-    //});
+    let color_1 = Box::new(EmitColorAnimation {
+        from_ms: 1000,
+        until_ms: 3000,
+        from_color: Color::rgb(0.7, 0.2, 0.0),
+        to_color: Color::rgb(0.7, 0.0, 0.7),
+    });
 
-    //let speed_1 = Box::new(EmitSpeedAnimation {
-    //from_ms: 1000,
-    //until_ms: 2000,
-    //from_speed: 2.5,
-    //to_speed: 1.5,
-    //});
+    let speed_1 = Box::new(EmitSpeedAnimation {
+        from_ms: 0,
+        until_ms: 6000,
+        from_speed: 10.,
+        to_speed: 100.,
+    });
 
     //let speed_2 = Box::new(EmitSpeedAnimation {
     //from_ms: 3000,
@@ -257,7 +257,7 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //max_radius: 3.5,
     //});
 
-    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> = vec![diffusion_1];
+    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> = vec![diffusion_1, color_1];
 
     Some(EmitterAnimationHandler::new(loop_ms, animations))
 }
