@@ -1,8 +1,15 @@
 #[derive(Debug, Clone, Copy)]
-pub struct Angles(pub f32, pub f32);
+pub struct Angles {
+    pub elevation: f32,
+    pub bearing: f32,
+}
 
 impl Angles {
-    pub fn to_radians(&self) -> Angles {
-        Angles(self.0.to_radians(), self.1.to_radians())
+    pub fn new(elevation: f32, bearing: f32) -> Self {
+        Self { elevation, bearing }
+    }
+
+    pub fn to_radians(&self) -> Self {
+        Angles::new(self.elevation.to_radians(), self.bearing.to_radians())
     }
 }

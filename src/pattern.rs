@@ -168,15 +168,15 @@ pub fn trail_animation() -> TrailHandler {
 //}
 
 pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
-    let loop_ms = 4000;
-    let sway_1 = Box::new(SwayAnimation {
-        from_ms: 0,
-        until_ms: loop_ms,
-        start_elevation_radians: 135_f32.to_radians(),
-        end_elevation_radians: 360_f32.to_radians(),
-        start_bearing_radians: 10_f32.to_radians(),
-        end_bearing_radians: 60_f32.to_radians(),
-    });
+    let loop_ms = 6000;
+    //let sway_1 = Box::new(SwayAnimation {
+    //from_ms: 0,
+    //until_ms: loop_ms,
+    //start_elevation_radians: 135_f32.to_radians(),
+    //end_elevation_radians: 360_f32.to_radians(),
+    //start_bearing_radians: 10_f32.to_radians(),
+    //end_bearing_radians: 60_f32.to_radians(),
+    //});
 
     //let sway_2 = Box::new(SwayAnimation {
     //from_ms: 1000,
@@ -199,12 +199,14 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //end_elevation_radians: 135.,
     //});
 
-    //let diffusion_1 = Box::new(DiffusionAnimation {
-    //from_ms: 0,
-    //until_ms: 2000,
-    //start_diffusion_degrees: 70.,
-    //end_diffusion_degrees: 5.,
-    //});
+    let diffusion_1 = Box::new(DiffusionAnimation {
+        from_ms: 0,
+        until_ms: loop_ms,
+        start_elevation_radians: 10_f32.to_radians(),
+        end_elevation_radians: 10_f32.to_radians(),
+        start_bearing_radians: 10_f32.to_radians(),
+        end_bearing_radians: 90_f32.to_radians(),
+    });
 
     //let diffusion_2 = Box::new(DiffusionAnimation {
     //from_ms: 2000,
@@ -255,7 +257,7 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //max_radius: 3.5,
     //});
 
-    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> = vec![sway_1];
+    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> = vec![diffusion_1];
 
     Some(EmitterAnimationHandler::new(loop_ms, animations))
 }
@@ -354,16 +356,16 @@ pub fn random_forces() -> Option<ForceHandler> {
     //max_vz: 0.,
     //}));
 
-    //force_handler.add(Box::new(AcceleratingForce {
-    //from_ms: 2_000,
-    //until_ms: 3_000,
-    //nx: 0.,
-    //ny: 10.,
-    //nz: 0.,
-    //max_vx: 0.0,
-    //max_vy: 50.,
-    //max_vz: 0.,
-    //}));
+    force_handler.add(Box::new(AcceleratingForce {
+        from_ms: 2_000,
+        until_ms: 3_000,
+        nx: 0.,
+        ny: 10.,
+        nz: 0.,
+        max_vx: 0.0,
+        max_vy: 50.,
+        max_vz: 0.,
+    }));
 
     //force_handler.add(Box::new(GravitationalForce {
     //from_ms: 0,

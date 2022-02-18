@@ -90,7 +90,7 @@ pub struct EmitOptions {
 
 impl EmitOptions {
     pub fn angle_emission_radians(&self) -> f32 {
-        self.angle_radians.0 + EMIT_RADIANS
+        self.angle_radians.elevation + EMIT_RADIANS
     }
 }
 
@@ -357,14 +357,14 @@ fn spawn_particles_system(
             let emitter_depth = gen_abs_range(&mut rng, emit_options.emitter_size.depth);
             let distortion = gen_dyn_range(&mut rng, emit_options.emission_distortion);
 
-            let Angles(elevation, bearing) = emit_options.angle_radians;
+            let Angles { elevation, bearing } = emit_options.angle_radians;
             let x = (position.x + distortion) + emitter_length * elevation.cos() * bearing.cos();
             let y = (position.y + distortion) + emitter_length * elevation.sin() * bearing.cos();
             let z = (position.z + distortion + emitter_depth) + emitter_length * bearing.sin();
 
             let diffusion_elevation_delta =
-                gen_dyn_range(&mut rng, emit_options.diffusion_radians.0);
-            let bearing_radians = gen_dyn_range(&mut rng, emit_options.diffusion_radians.1);
+                gen_dyn_range(&mut rng, emit_options.diffusion_radians.elevation);
+            let bearing_radians = gen_dyn_range(&mut rng, emit_options.diffusion_radians.bearing);
             let elevation_radians =
                 emit_options.angle_emission_radians() + diffusion_elevation_delta;
 
@@ -454,7 +454,7 @@ impl Emitter {
             emission_distortion,
             particle_color,
             particles_per_emission,
-            delay_between_emission_ms: delay_between_emission,
+            delay_between_emission_ms,
             particle_lifetime,
             particle_radius,
             particle_mass,
@@ -471,7 +471,7 @@ impl Emitter {
         let emit_options = EmitOptions {
             particles_per_emission,
             diffusion_radians: diffusion_degrees.to_radians(),
-            delay_between_emission_ms: delay_between_emission,
+            delay_between_emission_ms,
             angle_radians,
             emission_distortion,
             emitter_size,
@@ -527,51 +527,6 @@ impl Emitter {
             builder.insert(ah);
         }
     }
-
-    //pub fn emit(
-    //&mut self,
-    //commands: &mut Commands,
-    //meshes: &mut ResMut<Assets<Mesh>>,
-    //materials: &mut ResMut<Assets<StandardMaterial>>,
-    //) {
-    //let elapsed = self.lifetime.elapsed();
-    //let overdue = elapsed > self.emitter_duration;
-    //let emitter_elapsed_ms = elapsed.as_millis();
-    //let new_emission = (emitter_elapsed_ms / self.delay_between_emission_ms) as i32;
-
-    //if overdue || new_emission <= self.current_emission {
-    //return;
-    //}
-
-    //self.current_emission = new_emission;
-    //let mut rng = thread_rng();
-    ////let lifetime = Arc::new(Instant::now());
-    //for _ in 0..self.particles_per_emission {
-    //let emitter_position = gen_abs_range(&mut rng, self.emitter_diameter);
-    //let distortion = gen_dyn_range(&mut rng, self.emission_distortion);
-    //let x = (self.position.x + distortion) + emitter_position * self.angle_radians.cos();
-    //let y = (self.position.y + distortion) + emitter_position * self.angle_radians.sin();
-    //let z = 0.;
-
-    ////self.animate_emitter(emitter_elapsed_ms);
-    ////self.update_particles(emitter_elapsed_ms);
-
-    ////if self.particles.is_empty() && overdue {
-    ////self.delete = true;
-    ////}
-
-    ////self.particle_count = self.particles.len() as u32;
-    //}
-
-    //fn update_particles(&mut self, emitter_elapsed_ms: u128) {
-    //for i in (0..self.particles.len()).rev() {
-    //let mut particle = self.particles.swap_remove(i);
-
-    ////let particle_elapsed_ms = particle.lifetime.elapsed().as_millis();
-
-    ////particle.position.x += particle.vx;
-    ////particle.position.y += particle.vy;
-    ////particle.position.z += particle.vz;
 
     ////if let Some(trail_handler) = &mut particle.trail_handler {
     ////let data = TrailData {

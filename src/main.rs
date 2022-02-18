@@ -153,12 +153,12 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
     let options = EmitterOptions {
         emitter_position,
         emitter_size: EmitterSize {
-            length: 8.,
-            depth: 8.,
+            length: 4.,
+            depth: 4.,
         },
         emitter_duration: Duration::from_secs(10),
-        angle_degrees: Angles(0., 0.),
-        diffusion_degrees: Angles(45., 45.),
+        angle_degrees: Angles::new(0., 0.),
+        diffusion_degrees: Angles::new(45., 45.),
         emission_distortion: 0.,
         particle_color: Color::Rgba {
             red: 0.5,
@@ -171,7 +171,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.3,
         particle_mass: 1.,
-        particle_speed: 30.,
+        particle_speed: 40.,
         particle_friction_coefficient: 0.005,
         force_handler: random_forces(),
         bounds: None,
