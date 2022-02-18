@@ -24,7 +24,7 @@ impl EmitterAnimate for LooseMovementAnimation {
         self.vx = (self.vx * stray.cos()) - (self.vy * stray.sin());
         self.vy = (self.vx * stray.sin()) + (self.vy * stray.cos());
 
-        data.x += self.vx;
-        data.y += self.vy;
+        //data.x += self.vx;
+        //data.y += self.vy;
     }
 }

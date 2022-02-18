@@ -22,6 +22,6 @@ impl EmitterAnimate for DiffusionAnimation {
         let angle_degrees = self.start_diffusion_degrees
             + fraction * (self.end_diffusion_degrees - self.start_diffusion_degrees);
 
-        data.diffusion_radians = angle_degrees.to_radians();
+        //data.diffusion_radians = angle_degrees.to_radians();
     }
 }

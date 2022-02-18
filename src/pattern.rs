@@ -167,107 +167,97 @@ pub fn trail_animation() -> TrailHandler {
 //}
 //}
 
-fn sway_and_diffusion_animation() -> Option<EmitterAnimationHandler> {
+pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
+    let loop_ms = 4000;
     let sway_1 = Box::new(SwayAnimation {
         from_ms: 0,
-        until_ms: 1000,
-        start_angle_degrees: 135.,
-        end_angle_degrees: 360.,
+        until_ms: loop_ms,
+        start_elevation_radians: 135_f32.to_radians(),
+        end_elevation_radians: 360_f32.to_radians(),
+        start_bearing_radians: 10_f32.to_radians(),
+        end_bearing_radians: 60_f32.to_radians(),
     });
 
-    let sway_2 = Box::new(SwayAnimation {
-        from_ms: 1000,
-        until_ms: 2000,
-        start_angle_degrees: 0.,
-        end_angle_degrees: 135.,
-    });
+    //let sway_2 = Box::new(SwayAnimation {
+    //from_ms: 1000,
+    //until_ms: 2000,
+    //start_elevation_radians: 0.,
+    //end_elevation_radians: 135.,
+    //});
 
-    let sway_3 = Box::new(SwayAnimation {
-        from_ms: 2000,
-        until_ms: 3000,
-        start_angle_degrees: 135.,
-        end_angle_degrees: 360.,
-    });
+    //let sway_3 = Box::new(SwayAnimation {
+    //from_ms: 2000,
+    //until_ms: 3000,
+    //start_elevation_radians: 135.,
+    //end_elevation_radians: 360.,
+    //});
 
-    let sway_4 = Box::new(SwayAnimation {
-        from_ms: 3000,
-        until_ms: 4000,
-        start_angle_degrees: 0.,
-        end_angle_degrees: 135.,
-    });
+    //let sway_4 = Box::new(SwayAnimation {
+    //from_ms: 3000,
+    //until_ms: 4000,
+    //start_elevation_radians: 0.,
+    //end_elevation_radians: 135.,
+    //});
 
-    let diffusion_1 = Box::new(DiffusionAnimation {
-        from_ms: 0,
-        until_ms: 2000,
-        start_diffusion_degrees: 70.,
-        end_diffusion_degrees: 5.,
-    });
+    //let diffusion_1 = Box::new(DiffusionAnimation {
+    //from_ms: 0,
+    //until_ms: 2000,
+    //start_diffusion_degrees: 70.,
+    //end_diffusion_degrees: 5.,
+    //});
 
-    let diffusion_2 = Box::new(DiffusionAnimation {
-        from_ms: 2000,
-        until_ms: 4000,
-        start_diffusion_degrees: 5.,
-        end_diffusion_degrees: 125.,
-    });
+    //let diffusion_2 = Box::new(DiffusionAnimation {
+    //from_ms: 2000,
+    //until_ms: 4000,
+    //start_diffusion_degrees: 5.,
+    //end_diffusion_degrees: 125.,
+    //});
 
-    let movement_1 = Box::new(LooseMovementAnimation {
-        from_ms: 0,
-        until_ms: 3000,
-        vx: 1.1,
-        vy: 0.8,
-        stray_radians: 2_f32.to_radians(),
-    });
+    //let movement_1 = Box::new(LooseMovementAnimation {
+    //from_ms: 0,
+    //until_ms: 3000,
+    //vx: 1.1,
+    //vy: 0.8,
+    //stray_radians: 2_f32.to_radians(),
+    //});
 
-    let movement_2 = Box::new(LooseMovementAnimation {
-        from_ms: 3000,
-        until_ms: 4000,
-        vx: -1.2,
-        vy: -0.6,
-        stray_radians: 2_f32.to_radians(),
-    });
+    //let movement_2 = Box::new(LooseMovementAnimation {
+    //from_ms: 3000,
+    //until_ms: 4000,
+    //vx: -1.2,
+    //vy: -0.6,
+    //stray_radians: 2_f32.to_radians(),
+    //});
 
-    let color_1 = Box::new(EmitColorAnimation {
-        from_ms: 1000,
-        until_ms: 3000,
-        from_color: Color::rgb(0. / 255., 100. / 255., 155. / 255.),
-        to_color: Color::rgb(0. / 255., 135. / 255., 100. / 255.),
-    });
+    //let color_1 = Box::new(EmitColorAnimation {
+    //from_ms: 1000,
+    //until_ms: 3000,
+    //from_color: Color::rgb(0. / 255., 100. / 255., 155. / 255.),
+    //to_color: Color::rgb(0. / 255., 135. / 255., 100. / 255.),
+    //});
 
-    let speed_1 = Box::new(EmitSpeedAnimation {
-        from_ms: 1000,
-        until_ms: 2000,
-        from_speed: 2.5,
-        to_speed: 1.5,
-    });
+    //let speed_1 = Box::new(EmitSpeedAnimation {
+    //from_ms: 1000,
+    //until_ms: 2000,
+    //from_speed: 2.5,
+    //to_speed: 1.5,
+    //});
 
-    let speed_2 = Box::new(EmitSpeedAnimation {
-        from_ms: 3000,
-        until_ms: 4000,
-        from_speed: 1.5,
-        to_speed: 4.0,
-    });
+    //let speed_2 = Box::new(EmitSpeedAnimation {
+    //from_ms: 3000,
+    //until_ms: 4000,
+    //from_speed: 1.5,
+    //to_speed: 4.0,
+    //});
 
-    let randomize_size_1 = Box::new(RandomizeSizeAnimation {
-        min_radius: 1.,
-        max_radius: 3.5,
-    });
+    //let randomize_size_1 = Box::new(RandomizeSizeAnimation {
+    //min_radius: 1.,
+    //max_radius: 3.5,
+    //});
 
-    let animations: Vec<Box<dyn EmitterAnimate>> = vec![
-        sway_1,
-        sway_2,
-        sway_3,
-        sway_4,
-        diffusion_1,
-        diffusion_2,
-        movement_1,
-        movement_2,
-        color_1,
-        speed_1,
-        speed_2,
-        randomize_size_1,
-    ];
+    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> = vec![sway_1];
 
-    Some(EmitterAnimationHandler::new(4000, animations))
+    Some(EmitterAnimationHandler::new(loop_ms, animations))
 }
 
 //pub fn another_emitter() -> EmitterOptions {
@@ -367,33 +357,33 @@ pub fn random_forces() -> Option<ForceHandler> {
     //force_handler.add(Box::new(AcceleratingForce {
     //from_ms: 2_000,
     //until_ms: 3_000,
-    //nx: 0.01,
-    //ny: -0.004,
+    //nx: 0.,
+    //ny: 10.,
     //nz: 0.,
-    //max_vx: -0.2,
-    //max_vy: -0.2,
+    //max_vx: 0.0,
+    //max_vy: 50.,
     //max_vz: 0.,
     //}));
 
-    force_handler.add(Box::new(GravitationalForce {
-        from_ms: 0,
-        until_ms: 3000,
-        gravitation_force: -0.01,
-        dead_zone: 5.,
-        mass: 100.,
-        start: Vec3::new(0., 0., 0.),
-        end: Vec3::new(0., 0., 0.),
-    }));
+    //force_handler.add(Box::new(GravitationalForce {
+    //from_ms: 0,
+    //until_ms: 3000,
+    //gravitation_force: -0.01,
+    //dead_zone: 5.,
+    //mass: 100.,
+    //start: Vec3::new(0., 0., 0.),
+    //end: Vec3::new(0., 0., 0.),
+    //}));
 
-    force_handler.add(Box::new(GravitationalForce {
-        from_ms: 3000,
-        until_ms: forces_length,
-        gravitation_force: 0.01,
-        dead_zone: 5.,
-        mass: 1000.,
-        start: Vec3::new(0., 0., 0.),
-        end: Vec3::new(0., 0., 0.),
-    }));
+    //force_handler.add(Box::new(GravitationalForce {
+    //from_ms: 3000,
+    //until_ms: forces_length,
+    //gravitation_force: 0.01,
+    //dead_zone: 5.,
+    //mass: 1000.,
+    //start: Vec3::new(0., 0., 0.),
+    //end: Vec3::new(0., 0., 0.),
+    //}));
 
     Some(force_handler)
 }

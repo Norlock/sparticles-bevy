@@ -1,13 +1,15 @@
+use bevy::prelude::Component;
+
 use crate::emitters::emitter_animation::{EmitterAnimate, EmitterData};
 
-#[derive(Debug)]
+#[derive(Component)]
 pub struct EmitterAnimationHandler {
-    animations: Vec<Box<dyn EmitterAnimate>>,
+    animations: Vec<Box<dyn EmitterAnimate + Sync + Send>>,
     duration_ms: u32,
 }
 
 impl EmitterAnimationHandler {
-    pub fn new(duration_ms: u32, animations: Vec<Box<dyn EmitterAnimate>>) -> Self {
+    pub fn new(duration_ms: u32, animations: Vec<Box<dyn EmitterAnimate + Sync + Send>>) -> Self {
         Self {
             animations,
             duration_ms,

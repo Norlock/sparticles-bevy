@@ -4,8 +4,10 @@ use crate::emitters::emitter_animation::EmitterData;
 pub struct SwayAnimation {
     pub from_ms: u32,
     pub until_ms: u32,
-    pub start_angle_degrees: f32,
-    pub end_angle_degrees: f32,
+    pub start_elevation_radians: f32,
+    pub end_elevation_radians: f32,
+    pub start_bearing_radians: f32,
+    pub end_bearing_radians: f32,
 }
 
 impl EmitterAnimate for SwayAnimation {
@@ -14,13 +16,15 @@ impl EmitterAnimate for SwayAnimation {
             return;
         }
 
+        let elevation = &mut data.emit_options.angle_radians;
         let delta_current = cycle_ms - self.from_ms;
         let delta_max = self.until_ms - self.from_ms;
 
         // calculate percent
         let fraction = delta_current as f32 / delta_max as f32;
-        let angle_degrees = self.start_angle_degrees
-            + fraction * (self.end_angle_degrees - self.start_angle_degrees);
-        data.angle_radians = angle_degrees.to_radians();
+        elevation.0 = self.start_elevation_radians
+            + fraction * (self.end_elevation_radians - self.start_elevation_radians);
+        elevation.1 = self.start_bearing_radians
+            + fraction * (self.end_bearing_radians - self.start_bearing_radians);
     }
 }

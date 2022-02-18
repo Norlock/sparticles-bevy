@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
 use crate::emitters::emitter::EmitterSize;
+use crate::pattern::emitter_animations;
 use crate::pattern::random_forces;
 use crate::pattern::shimmer_animations;
-use crate::point::Point;
+use crate::point::Angles;
 use dev::dev_camera::DevCameraPlugin;
 use dev::dev_ui::DevUIPlugin;
 use emitters::emitter::Bounds;
@@ -156,8 +157,8 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             depth: 8.,
         },
         emitter_duration: Duration::from_secs(10),
-        angle_degrees: Point(0., 0.),
-        diffusion_degrees: Point(360., 360.),
+        angle_degrees: Angles(0., 0.),
+        diffusion_degrees: Angles(45., 45.),
         emission_distortion: 0.,
         particle_color: Color::Rgba {
             red: 0.5,
@@ -170,7 +171,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.3,
         particle_mass: 1.,
-        particle_speed: 0.3,
+        particle_speed: 30.,
         particle_friction_coefficient: 0.005,
         force_handler: random_forces(),
         bounds: None,
@@ -182,6 +183,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         //end_y: None,
         //end_z: None,
         //}),
+        emitter_animation_handler: emitter_animations(),
         particle_animation_options: Some(shimmer_animations()),
     };
 

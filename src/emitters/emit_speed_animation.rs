@@ -20,6 +20,6 @@ impl EmitterAnimate for EmitSpeedAnimation {
         // calculate percent from 0..1
         let fraction = delta_current as f32 / delta_max as f32;
 
-        data.particle_speed = self.from_speed + fraction * (self.to_speed - self.from_speed);
+        //data.particle_speed = self.from_speed + fraction * (self.to_speed - self.from_speed);
     }
 }

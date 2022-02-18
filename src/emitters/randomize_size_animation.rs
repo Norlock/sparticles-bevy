@@ -9,6 +9,6 @@ pub struct RandomizeSizeAnimation {
 
 impl EmitterAnimate for RandomizeSizeAnimation {
     fn animate(&mut self, data: &mut EmitterData, _: u32) {
-        data.particle_radius = thread_rng().gen_range(self.min_radius..self.max_radius);
+        data.particle_attributes.radius = thread_rng().gen_range(self.min_radius..self.max_radius);
     }
 }
