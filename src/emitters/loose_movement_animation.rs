@@ -1,14 +1,13 @@
 use super::emitter_animation::EmitterAnimate;
-use crate::emitters::emitter_animation::EmitterData;
+use crate::{angles::Angles, emitters::emitter_animation::EmitterData};
 use rand::{thread_rng, Rng};
 
 pub struct LooseMovementAnimation {
     pub from_ms: u32,
     pub until_ms: u32,
-    pub vx: f32,
-    pub vy: f32,
-    //pub vz: f32,
+    pub speed: f32,
     pub stray_radians: f32,
+    pub angles_radians: Angles,
     // pub max_range: f32,
 }
 
@@ -21,8 +20,9 @@ impl EmitterAnimate for LooseMovementAnimation {
         }
 
         let stray = thread_rng().gen_range(-self.stray_radians..self.stray_radians);
-        self.vx = (self.vx * stray.cos()) - (self.vy * stray.sin());
-        self.vy = (self.vx * stray.sin()) + (self.vy * stray.cos());
+        //let vx =
+        //self.vx = (self.vx * stray.cos()) - (self.vy * stray.sin());
+        //self.vy = (self.vx * stray.sin()) + (self.vy * stray.cos());
 
         //data.x += self.vx;
         //data.y += self.vy;

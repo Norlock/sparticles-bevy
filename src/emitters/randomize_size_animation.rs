@@ -7,6 +7,7 @@ pub struct RandomizeSizeAnimation {
     pub max_radius: f32,
 }
 
+// TODO over nadenken radius wordt niet gebruikt.
 impl EmitterAnimate for RandomizeSizeAnimation {
     fn animate(&mut self, data: &mut EmitterData, _: u32) {
         data.particle_attributes.radius = thread_rng().gen_range(self.min_radius..self.max_radius);

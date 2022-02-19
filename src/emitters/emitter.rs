@@ -15,6 +15,7 @@ use crate::Position;
 use bevy::prelude::*;
 use rand::prelude::ThreadRng;
 use rand::{thread_rng, Rng};
+use std::ops::AddAssign;
 use std::time::Duration;
 
 use super::emitter_animation::EmitterData;
@@ -111,11 +112,17 @@ pub struct Particle;
 #[derive(Debug, Component)]
 struct Particles(Vec<Entity>);
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct Velocity {
     pub vx: f32,
     pub vy: f32,
     pub vz: f32,
+}
+
+impl Velocity {
+    pub fn new(vx: f32, vy: f32, vz: f32) -> Self {
+        Self { vx, vy, vz }
+    }
 }
 
 #[derive(Debug, Component)]

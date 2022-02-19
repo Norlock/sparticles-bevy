@@ -50,21 +50,21 @@ pub fn shimmer_animations() -> AnimationOptions {
         until_ms: 5000,
     }));
 
-    animations.push(Box::new(StrayAnimation::new(0, 5000, 5.)));
+    animations.push(Box::new(StrayAnimation::new(0, 5000, 3.)));
 
-    animations.push(Box::new(SizeAnimation {
-        from_ms: 2000,
-        until_ms: 3000,
-        start_scale: 1.,
-        end_scale: 1.5,
-    }));
+    //animations.push(Box::new(SizeAnimation {
+    //from_ms: 2000,
+    //until_ms: 3000,
+    //start_scale: 1.,
+    //end_scale: 1.5,
+    //}));
 
-    animations.push(Box::new(SizeAnimation {
-        from_ms: 3000,
-        until_ms: 4000,
-        start_scale: 1.5,
-        end_scale: 1.,
-    }));
+    //animations.push(Box::new(SizeAnimation {
+    //from_ms: 3000,
+    //until_ms: 4000,
+    //start_scale: 1.5,
+    //end_scale: 1.,
+    //}));
 
     AnimationOptions::new(5000, StartAnimationAt::RangeMs(0, 1000), animations)
 }
@@ -240,9 +240,9 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
 
     let speed_1 = Box::new(EmitSpeedAnimation {
         from_ms: 0,
-        until_ms: 6000,
-        from_speed: 10.,
-        to_speed: 100.,
+        until_ms: 2000,
+        from_speed: 40.,
+        to_speed: 80.,
     });
 
     //let speed_2 = Box::new(EmitSpeedAnimation {
@@ -253,11 +253,12 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //});
 
     //let randomize_size_1 = Box::new(RandomizeSizeAnimation {
-    //min_radius: 1.,
-    //max_radius: 3.5,
+    //min_radius: 0.1,
+    //max_radius: 0.7,
     //});
 
-    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> = vec![diffusion_1, color_1];
+    let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> =
+        vec![diffusion_1, color_1, speed_1];
 
     Some(EmitterAnimationHandler::new(loop_ms, animations))
 }
