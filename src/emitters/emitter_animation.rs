@@ -1,7 +1,10 @@
+use bevy::core::Time;
+use bevy::ecs::system::Res;
+
 use crate::position::Position;
 use std::fmt::Debug;
 
-use super::emitter::{EmitOptions, EmitterParticleAttributes};
+use super::emitter::{EmitOptions, EmitterParticleAttributes, Velocity};
 
 pub trait EmitterAnimate {
     fn animate(&mut self, data: &mut EmitterData, cycle_ms: u32);
@@ -17,4 +20,6 @@ pub struct EmitterData<'a> {
     pub particle_attributes: &'a mut EmitterParticleAttributes,
     pub emit_options: &'a mut EmitOptions,
     pub position: &'a mut Position,
+    pub velocity: &'a mut Velocity,
+    pub delta_seconds: f32,
 }

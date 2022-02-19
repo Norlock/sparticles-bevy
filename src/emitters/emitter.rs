@@ -1,6 +1,3 @@
-//use crate::animations::animation::AnimationData;
-//use crate::animations::animation_handler::AnimationHandler;
-//use crate::animations::animation_handler::AnimationOptions;
 use crate::angles::Angles;
 use crate::animations::animation::AnimationData;
 use crate::animations::animation_handler::AnimationHandler;
@@ -15,7 +12,6 @@ use crate::Position;
 use bevy::prelude::*;
 use rand::prelude::ThreadRng;
 use rand::{thread_rng, Rng};
-use std::ops::AddAssign;
 use std::time::Duration;
 
 use super::emitter_animation::EmitterData;
@@ -30,6 +26,7 @@ pub struct EmitterOptions {
     pub emitter_position: Position,
     pub emitter_size: EmitterSize,
     pub emitter_duration: Duration,
+    pub emitter_velocity: Velocity,
     pub angle_degrees: Angles,
     /// Initial spread factor x,y / z
     pub diffusion_degrees: Angles,
@@ -112,7 +109,7 @@ pub struct Particle;
 #[derive(Debug, Component)]
 struct Particles(Vec<Entity>);
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Debug, Default)]
 pub struct Velocity {
     pub vx: f32,
     pub vy: f32,
@@ -122,6 +119,10 @@ pub struct Velocity {
 impl Velocity {
     pub fn new(vx: f32, vy: f32, vz: f32) -> Self {
         Self { vx, vy, vz }
+    }
+
+    pub fn zero() -> Self {
+        Default::default()
     }
 }
 
@@ -227,14 +228,16 @@ fn apply_animations_system(
 
 fn remove_particles_system(
     mut particles_query: Query<(&Transform, &ParticleAttributes, &LifeCycle), With<Particle>>,
-    emitter_query: Query<(Option<&Bounds>, &Particles), With<Emitter>>,
+    mut emitter_query: Query<(Option<&Bounds>, &mut Particles), With<Emitter>>,
     mut commands: Commands,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (bounds, particles) in emitter_query.iter() {
-        for &particle_entity in particles.0.iter() {
+    for (bounds, mut particles) in emitter_query.iter_mut() {
+        for index in (0..particles.0.len()).rev() {
+            let particle_entity = particles.0.swap_remove(index);
+
             if let Ok((transform, attributes, life_cycle)) =
                 particles_query.get_mut(particle_entity)
             {
@@ -277,6 +280,7 @@ fn remove_particles_system(
                     }
                 }
             }
+            particles.0.push(particle_entity);
         }
     }
 }
@@ -285,23 +289,20 @@ fn transform_particle_system(
     mut query: Query<(&mut Velocity, &mut Transform, &ParticleAttributes), With<Particle>>,
     time: Res<Time>,
 ) {
-    for (mut speed, mut transform, attributes) in query.iter_mut() {
-        let x_force = speed.vx * attributes.mass;
-        let y_force = speed.vy * attributes.mass;
-        let z_force = speed.vz * attributes.mass;
+    for (mut velocity, mut transform, attributes) in query.iter_mut() {
+        let x_force = velocity.vx * attributes.mass;
+        let y_force = velocity.vy * attributes.mass;
+        let z_force = velocity.vz * attributes.mass;
 
-        let x_friction = x_force * attributes.friction_coefficient;
-        let y_friction = y_force * attributes.friction_coefficient;
-        let z_friction = z_force * attributes.friction_coefficient;
-
-        speed.vx = (x_force - x_friction) / attributes.mass;
-        speed.vy = (y_force - y_friction) / attributes.mass;
-        speed.vz = (z_force - z_friction) / attributes.mass;
+        let friction_multiplier = 1. - attributes.friction_coefficient;
+        velocity.vx = x_force * friction_multiplier / attributes.mass;
+        velocity.vy = y_force * friction_multiplier / attributes.mass;
+        velocity.vz = z_force * friction_multiplier / attributes.mass;
 
         let delta = time.delta_seconds();
-        transform.translation.x += speed.vx * delta;
-        transform.translation.y += speed.vy * delta;
-        transform.translation.z += speed.vz * delta;
+        transform.translation.x += velocity.vx * delta;
+        transform.translation.y += velocity.vy * delta;
+        transform.translation.z += velocity.vz * delta;
     }
 }
 
@@ -420,6 +421,7 @@ fn animate_emitter_system(
             &mut EmitOptions,
             &mut EmitterParticleAttributes,
             &mut Position,
+            &mut Velocity,
             &mut EmitterAnimationHandler,
         ),
         With<Emitter>,
@@ -427,17 +429,31 @@ fn animate_emitter_system(
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
+    let delta_seconds = time.delta_seconds();
 
-    for (life_cycle, mut emit_options, mut particle_attr, mut position, mut anim_handler) in
-        query.iter_mut()
+    for (
+        life_cycle,
+        mut emit_options,
+        mut particle_attr,
+        mut position,
+        mut velocity,
+        mut anim_handler,
+    ) in query.iter_mut()
     {
         let mut data = EmitterData {
             particle_attributes: &mut particle_attr,
             emit_options: &mut emit_options,
             position: &mut position,
+            velocity: &mut velocity,
+            delta_seconds,
         };
 
         anim_handler.animate(&mut data, life_cycle.elapsed_ms(total_elapsed_ms));
+
+        position.x += velocity.vx * delta_seconds;
+        position.y += velocity.vy * delta_seconds;
+        position.z += velocity.vz * delta_seconds;
+        println!("{:?} {:?}", position, velocity);
     }
 }
 
@@ -467,6 +483,7 @@ impl Emitter {
             particle_animation_options,
             emitter_animation_handler,
             force_handler,
+            emitter_velocity,
         } = options;
 
         let emit_options = EmitOptions {
@@ -510,6 +527,7 @@ impl Emitter {
             .insert(spawn_options)
             .insert(meshes)
             .insert(particles)
+            .insert(emitter_velocity)
             .insert(Emitter);
 
         if let Some(bounds) = bounds {

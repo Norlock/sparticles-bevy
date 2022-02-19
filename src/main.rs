@@ -8,6 +8,7 @@ use crate::pattern::shimmer_animations;
 use dev::dev_camera::DevCameraPlugin;
 use dev::dev_ui::DevUIPlugin;
 use emitters::emitter::Bounds;
+use emitters::emitter::Velocity;
 use std::time::Duration;
 
 use crate::position::Position;
@@ -22,6 +23,7 @@ mod angles;
 mod dev;
 mod forces;
 mod grid;
+mod math;
 mod particle;
 mod pattern;
 mod position;
@@ -65,10 +67,11 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             length: 8.,
             depth: 4.,
         },
-        emitter_duration: Duration::from_secs(10),
+        emitter_duration: Duration::from_secs(30),
         angle_degrees: Angles::new(45., 0.),
         diffusion_degrees: Angles::new(45., 45.),
         emission_distortion: 0.,
+        emitter_velocity: Velocity::new(10., -15., 10.),
         particle_color: Color::Rgba {
             red: 0.5,
             green: 1.0,

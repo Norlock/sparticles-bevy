@@ -8,6 +8,8 @@ use crate::emitters::diffusion_animation::DiffusionAnimation;
 use crate::emitters::emit_color_animation::EmitColorAnimation;
 use crate::emitters::emit_speed_animation::EmitSpeedAnimation;
 use crate::emitters::emitter::EmitterOptions;
+use crate::emitters::emitter::EmitterSize;
+use crate::emitters::emitter::Velocity;
 use crate::emitters::emitter_animation::EmitterAnimate;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::emitters::loose_movement_animation::LooseMovementAnimation;
@@ -17,6 +19,7 @@ use crate::forces::accelerating_force::AcceleratingForce;
 use crate::forces::constant_force::ConstantForce;
 use crate::forces::force_handler::ForceHandler;
 use crate::forces::gravitational_force::GravitationalForce;
+use crate::math::velocity;
 use crate::trails::trail_animation::TrailAnimation;
 use crate::trails::trail_animation::TrailOptions;
 use crate::trails::trail_handler::TrailHandler;
@@ -215,13 +218,17 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //end_diffusion_degrees: 125.,
     //});
 
-    //let movement_1 = Box::new(LooseMovementAnimation {
-    //from_ms: 0,
-    //until_ms: 3000,
-    //vx: 1.1,
-    //vy: 0.8,
-    //stray_radians: 2_f32.to_radians(),
-    //});
+    let movement_1 = Box::new(LooseMovementAnimation {
+        from_ms: 0,
+        until_ms: 3000,
+        stray_radians: 2_f32.to_radians(),
+        emitter_mass: 1.,
+        gravitational_force: 0.01,
+        base: Vec3::ZERO,
+        base_mass: 10000.,
+        range: 100.,
+        friction_coefficient: 0.001,
+    });
 
     //let movement_2 = Box::new(LooseMovementAnimation {
     //from_ms: 3000,
@@ -258,7 +265,7 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //});
 
     let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> =
-        vec![diffusion_1, color_1, speed_1];
+        vec![diffusion_1, color_1, speed_1, movement_1];
 
     Some(EmitterAnimationHandler::new(loop_ms, animations))
 }
