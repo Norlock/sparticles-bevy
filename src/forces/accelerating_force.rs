@@ -26,9 +26,9 @@ impl Force for AcceleratingForce {
         }
 
         let acceleration = ((force_cycle_ms - self.from_ms) as f32 / MS_PER_SEC).powf(2.);
-        let vx = self.nx * acceleration / data.mass;
-        let vy = self.ny * acceleration / data.mass;
-        let vz = self.nz * acceleration / data.mass;
+        let vx = self.nx * acceleration / data.mass * data.delta_seconds;
+        let vy = self.ny * acceleration / data.mass * data.delta_seconds;
+        let vz = self.nz * acceleration / data.mass * data.delta_seconds;
 
         let velocity = &mut data.velocity;
         let new_vx = velocity.vx + vx;

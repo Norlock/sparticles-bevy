@@ -3,7 +3,7 @@ use bevy::math::Vec3;
 
 pub struct GravitationalForce {
     /// In newton
-    pub gravitation_force: f32,
+    pub gravitational_force: f32,
     /// Use to exclude extreme gravitational pulls, e.g. 20.
     pub dead_zone: f32,
     pub mass: f32,
@@ -55,7 +55,7 @@ impl Force for GravitationalForce {
 
         let distance_pow = x_distance_pow + y_distance_pow + z_distance_pow;
 
-        let top_formula = self.gravitation_force * self.mass * data.mass;
+        let top_formula = self.gravitational_force * self.mass * data.mass;
         let force = top_formula / distance_pow;
 
         let x_percentage = x_distance_pow / distance_pow;
@@ -63,12 +63,12 @@ impl Force for GravitationalForce {
         let z_percentage = z_distance_pow / distance_pow;
 
         let vx = force * x_percentage / data.mass;
-        velocity.vx += vx * x_distance.signum();
+        velocity.vx += vx * x_distance.signum() * data.delta_seconds;
 
         let vy = force * y_percentage / data.mass;
-        velocity.vy += vy * y_distance.signum();
+        velocity.vy += vy * y_distance.signum() * data.delta_seconds;
 
         let vz = force * z_percentage / data.mass;
-        velocity.vz += vz * z_distance.signum();
+        velocity.vz += vz * z_distance.signum() * data.delta_seconds;
     }
 }

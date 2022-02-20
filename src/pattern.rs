@@ -53,7 +53,7 @@ pub fn shimmer_animations() -> AnimationOptions {
         until_ms: 5000,
     }));
 
-    animations.push(Box::new(StrayAnimation::new(0, 5000, 3.)));
+    //animations.push(Box::new(StrayAnimation::new(0, 5000, 3.)));
 
     //animations.push(Box::new(SizeAnimation {
     //from_ms: 2000,
@@ -219,13 +219,12 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //});
 
     let movement_1 = Box::new(LooseMovementAnimation {
-        stray_radians: 2_f32.to_radians(),
+        stray_radians: 5_f32.to_radians(),
         emitter_mass: 1.,
         gravitational_force: 1.,
         base: Vec3::ZERO,
         base_mass: 10000.,
         range: 10.,
-        friction_coefficient: 0.001,
     });
 
     //let movement_2 = Box::new(LooseMovementAnimation {
@@ -263,7 +262,7 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //});
 
     let animations: Vec<Box<dyn EmitterAnimate + Sync + Send>> =
-        vec![diffusion_1, color_1, speed_1, movement_1];
+        vec![diffusion_1, color_1, movement_1, speed_1];
 
     Some(EmitterAnimationHandler::new(loop_ms, animations))
 }
@@ -383,15 +382,15 @@ pub fn random_forces() -> Option<ForceHandler> {
     //end: Vec3::new(0., 0., 0.),
     //}));
 
-    //force_handler.add(Box::new(GravitationalForce {
-    //from_ms: 3000,
-    //until_ms: forces_length,
-    //gravitation_force: 0.01,
-    //dead_zone: 5.,
-    //mass: 1000.,
-    //start: Vec3::new(0., 0., 0.),
-    //end: Vec3::new(0., 0., 0.),
-    //}));
+    force_handler.add(Box::new(GravitationalForce {
+        from_ms: 000,
+        until_ms: forces_length,
+        gravitational_force: 1.5,
+        dead_zone: 5.,
+        mass: 20000.,
+        start: Vec3::new(0., 0., 0.),
+        end: Vec3::new(0., 0., 0.),
+    }));
 
     Some(force_handler)
 }

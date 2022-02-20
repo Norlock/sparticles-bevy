@@ -71,7 +71,8 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         angle_degrees: Angles::new(45., 0.),
         diffusion_degrees: Angles::new(45., 45.),
         emission_distortion: 0.,
-        emitter_velocity: Velocity::new(10., -15., 10.),
+        //emitter_velocity: Velocity::new(10., -15., 10.),
+        emitter_velocity: Velocity::zero(),
         particle_color: Color::Rgba {
             red: 0.5,
             green: 1.0,
@@ -83,7 +84,7 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.3,
         particle_mass: 1.,
-        particle_speed: 40.,
+        particle_speed: 30.,
         particle_friction_coefficient: 0.005,
         force_handler: random_forces(),
         bounds: None,

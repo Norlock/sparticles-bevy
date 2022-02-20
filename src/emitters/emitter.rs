@@ -163,6 +163,7 @@ fn apply_forces_system(
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
+    let delta_seconds = time.delta_seconds();
 
     for (force_handler, particles, life_cycle) in emitter_query.iter() {
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
@@ -183,6 +184,7 @@ fn apply_forces_system(
                     velocity: &mut velocity,
                     radius,
                     mass: attributes.mass,
+                    delta_seconds,
                 };
 
                 force_handler.apply(&mut data, elapsed_ms);
@@ -453,7 +455,7 @@ fn animate_emitter_system(
         position.x += velocity.vx * delta_seconds;
         position.y += velocity.vy * delta_seconds;
         position.z += velocity.vz * delta_seconds;
-        println!("{:?} {:?}", position, velocity);
+        //println!("{:?} {:?}", position, velocity);
     }
 }
 

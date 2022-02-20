@@ -19,4 +19,5 @@ pub struct ForceData<'a, 'b> {
     pub velocity: &'b mut Velocity,
     pub radius: Vec3,
     pub mass: f32,
+    pub delta_seconds: f32,
 }

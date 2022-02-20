@@ -15,6 +15,10 @@ pub fn equalize_total_speed(speed_squared: f32, new: &mut Velocity) {
 
 pub fn stray_velocity(velocity: &mut Velocity, stray_radians: f32) {
     let speed_squared = velocity.vy.powi(2) + velocity.vz.powi(2) + velocity.vx.powi(2);
+    if speed_squared == 0. {
+        return;
+    }
+
     let speed = speed_squared.sqrt();
 
     let mut rng = thread_rng();
