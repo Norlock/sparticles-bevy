@@ -219,14 +219,12 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     //});
 
     let movement_1 = Box::new(LooseMovementAnimation {
-        from_ms: 0,
-        until_ms: 3000,
         stray_radians: 2_f32.to_radians(),
         emitter_mass: 1.,
-        gravitational_force: 0.01,
+        gravitational_force: 1.,
         base: Vec3::ZERO,
         base_mass: 10000.,
-        range: 100.,
+        range: 10.,
         friction_coefficient: 0.001,
     });
 
