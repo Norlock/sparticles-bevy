@@ -91,7 +91,8 @@ fn setup(
         particle_mass: 1.,
         particle_speed: 30.,
         particle_friction_coefficient: 0.005,
-        force_handler: random_forces(),
+        //force_handler: random_forces(),
+        force_handler: None,
         bounds: None,
         //bounds: Some(Bounds {
         //start_x: None,
