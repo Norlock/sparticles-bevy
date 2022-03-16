@@ -293,6 +293,7 @@ fn transform_particle_system(
     mut query: Query<(&mut Velocity, &mut Transform, &ParticleAttributes), With<Particle>>,
     time: Res<Time>,
 ) {
+    let delta = time.delta_seconds();
     for (mut velocity, mut transform, attributes) in query.iter_mut() {
         let x_force = velocity.vx * attributes.mass;
         let y_force = velocity.vy * attributes.mass;
@@ -303,7 +304,6 @@ fn transform_particle_system(
         velocity.vy = y_force * friction_multiplier / attributes.mass;
         velocity.vz = z_force * friction_multiplier / attributes.mass;
 
-        let delta = time.delta_seconds();
         transform.translation.x += velocity.vx * delta;
         transform.translation.y += velocity.vy * delta;
         transform.translation.z += velocity.vz * delta;
