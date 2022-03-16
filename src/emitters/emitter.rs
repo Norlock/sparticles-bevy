@@ -145,16 +145,22 @@ pub struct EmitterPlugin;
 
 impl Plugin for EmitterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(0.01667))
-                .with_system(transform_particle_system)
-                .with_system(spawn_particles_system)
-                .with_system(apply_forces_system)
-                .with_system(apply_animations_system)
-                .with_system(remove_particles_system)
-                .with_system(animate_emitter_system),
-        );
+        //app.add_system_set(
+        //SystemSet::new()
+        //.with_run_criteria(FixedTimestep::step(0.01667))
+        //.with_system(transform_particle_system)
+        //.with_system(spawn_particles_system)
+        //.with_system(apply_forces_system)
+        //.with_system(apply_animations_system)
+        //.with_system(remove_particles_system)
+        //.with_system(animate_emitter_system),
+        //);
+        app.add_system(transform_particle_system)
+            .add_system(spawn_particles_system)
+            //.add_system(apply_forces_system)
+            //.add_system(apply_animations_system)
+            .add_system(remove_particles_system);
+        //.add_system(animate_emitter_system);
     }
 }
 
@@ -205,7 +211,6 @@ fn apply_animations_system(
         With<Particle>,
     >,
     mut emitter_query: Query<(&mut AnimationHandler, &Particles), With<Emitter>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
