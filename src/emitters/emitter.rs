@@ -299,6 +299,11 @@ fn transform_particle_system(
     time: Res<Time>,
 ) {
     let delta = time.delta_seconds();
+
+    if let Some((velocity, _, _)) = query.iter().next() {
+        println!("Vel {:?}", velocity);
+    }
+
     for (mut velocity, mut transform, attributes) in query.iter_mut() {
         let x_force = velocity.vx * attributes.mass;
         let y_force = velocity.vy * attributes.mass;
