@@ -236,7 +236,7 @@ fn apply_animations_system(
 }
 
 fn remove_particles_system(
-    mut particles_query: Query<(&Transform, &ParticleAttributes, &LifeCycle), With<Particle>>,
+    particles_query: Query<(&Transform, &ParticleAttributes, &LifeCycle), With<Particle>>,
     mut emitter_query: Query<(Option<&Bounds>, &mut Particles), With<Emitter>>,
     mut commands: Commands,
     time: Res<Time>,
@@ -245,13 +245,12 @@ fn remove_particles_system(
 
     for (bounds, mut particles) in emitter_query.iter_mut() {
         for index in (0..particles.0.len()).rev() {
-            let particle_entity = particles.0.swap_remove(index);
+            let particle_entity = particles.0[index];
 
-            if let Ok((transform, attributes, life_cycle)) =
-                particles_query.get_mut(particle_entity)
-            {
+            if let Ok((transform, attributes, life_cycle)) = particles_query.get(particle_entity) {
                 if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
                     commands.entity(particle_entity).despawn();
+                    particles.0.swap_remove(index);
                     continue;
                 }
 
@@ -285,11 +284,11 @@ fn remove_particles_system(
 
                     if below_x || below_y || below_z || above_x || above_y || above_z {
                         commands.entity(particle_entity).despawn();
+                        particles.0.swap_remove(index);
                         continue;
                     }
                 }
             }
-            particles.0.push(particle_entity);
         }
     }
 }
@@ -300,19 +299,19 @@ fn transform_particle_system(
 ) {
     let delta = time.delta_seconds();
 
-    if let Some((velocity, _, _)) = query.iter().next() {
-        println!("Vel {:?}", velocity);
-    }
-
     for (mut velocity, mut transform, attributes) in query.iter_mut() {
-        let x_force = velocity.vx * attributes.mass;
-        let y_force = velocity.vy * attributes.mass;
-        let z_force = velocity.vz * attributes.mass;
+        //let x_force = velocity.vx * attributes.mass;
+        //let y_force = velocity.vy * attributes.mass;
+        //let z_force = velocity.vz * attributes.mass;
 
-        let friction_multiplier = 1. - attributes.friction_coefficient;
-        velocity.vx = x_force * friction_multiplier / attributes.mass;
-        velocity.vy = y_force * friction_multiplier / attributes.mass;
-        velocity.vz = z_force * friction_multiplier / attributes.mass;
+        //let friction_multiplier = 1. - attributes.friction_coefficient;
+        //velocity.vx = x_force * friction_multiplier / attributes.mass;
+        //velocity.vy = y_force * friction_multiplier / attributes.mass;
+        //velocity.vz = z_force * friction_multiplier / attributes.mass;
+
+        velocity.vx *= 0.98;
+        velocity.vy *= 0.98;
+        velocity.vz *= 0.98;
 
         transform.translation.x += velocity.vx * delta;
         transform.translation.y += velocity.vy * delta;

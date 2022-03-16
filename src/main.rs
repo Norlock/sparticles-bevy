@@ -84,7 +84,7 @@ fn setup(
             blue: 0.5,
             alpha: 1.0,
         },
-        particles_per_emission: 200,
+        particles_per_emission: 20,
         delay_between_emission_ms: 100,
         particle_lifetime: Duration::from_secs(5),
         particle_radius: 0.1,
