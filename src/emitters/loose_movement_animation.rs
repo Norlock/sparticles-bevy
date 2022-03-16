@@ -5,11 +5,15 @@ use crate::{emitters::emitter_animation::EmitterData, math::velocity::stray_velo
 pub struct LooseMovementAnimation {
     pub stray_radians: f32,
     pub base: Vec3,
-    pub range: f32,
+    pub x_range: f32,
+    pub y_range: f32,
+    pub z_range: f32,
     pub gravitational_force: f32,
     pub base_mass: f32,
     pub emitter_mass: f32,
 }
+
+const DEAD_ZONE: f32 = 1.;
 
 // TODO pass base point which will act as a guideline, the further the emitter will fly off the more force it
 // will apply to return. Using inverse gravitational force.
@@ -29,13 +33,13 @@ impl EmitterAnimate for LooseMovementAnimation {
         let emitter_center_z = position.z + emitter_size.depth / 2.;
 
         let x_distance = self.base.x - emitter_center_x;
-        let x_pull_distance = self.range - x_distance.abs().min(self.range);
+        let x_pull_distance = self.x_range - x_distance.abs().min(self.x_range - DEAD_ZONE);
 
         let y_distance = self.base.y - emitter_center_y;
-        let y_pull_distance = self.range - y_distance.abs().min(self.range);
+        let y_pull_distance = self.y_range - y_distance.abs().min(self.y_range - DEAD_ZONE);
 
         let z_distance = self.base.z - emitter_center_z;
-        let z_pull_distance = self.range - z_distance.abs().min(self.range);
+        let z_pull_distance = self.z_range - z_distance.abs().min(self.z_range - DEAD_ZONE);
 
         let x_distance_pow = x_pull_distance.powi(2);
         let y_distance_pow = y_pull_distance.powi(2);

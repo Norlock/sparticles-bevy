@@ -1,9 +1,4 @@
-use crate::math::velocity::equalize_total_speed;
 use crate::math::velocity::stray_velocity;
-use rand::thread_rng;
-use rand::Rng;
-
-use crate::emitters::emitter::Velocity;
 
 use super::animation::Animate;
 use super::animation::AnimationData;

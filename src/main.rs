@@ -40,7 +40,12 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) {
+fn setup(
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
+    time: Res<Time>,
+) {
     commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_xyz(1.0, 2.0, 0.0),
         point_light: PointLight {
@@ -79,10 +84,10 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
             blue: 0.5,
             alpha: 1.0,
         },
-        particles_per_emission: 5,
+        particles_per_emission: 200,
         delay_between_emission_ms: 100,
         particle_lifetime: Duration::from_secs(5),
-        particle_radius: 0.3,
+        particle_radius: 0.1,
         particle_mass: 1.,
         particle_speed: 30.,
         particle_friction_coefficient: 0.005,
@@ -96,10 +101,12 @@ fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, time: Res<Time>) 
         //end_y: None,
         //end_z: None,
         //}),
-        emitter_animation_handler: emitter_animations(),
-        particle_animation_options: Some(shimmer_animations()),
+        //emitter_animation_handler: emitter_animations(),
+        emitter_animation_handler: None,
+        //particle_animation_options: Some(shimmer_animations()),
+        particle_animation_options: None,
     };
 
     let total_elapsed_ms = time.time_since_startup().as_millis();
-    Emitter::create(options, &mut commands, meshes, total_elapsed_ms);
+    Emitter::create(options, &mut commands, meshes, materials, total_elapsed_ms);
 }

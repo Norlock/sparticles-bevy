@@ -10,6 +10,7 @@ TODO pass transform struct instead of trying to modify particles everywhere.
 - [x] Friction on collision particles
 - [x] Better color animation.
 - [x] Apply gravity on particles.
-- [ ] Animations on Emitter.
+- [x] Animations on Emitter.
+- [ ] Particle trails.
 - [ ] Boid behaviour
 - [ ] Move a lot of work to GPU (research).

@@ -21,8 +21,8 @@ impl Animate for SizeAnimation {
         // calculate percent
         let fraction = delta_current as f32 / delta_max as f32;
         let scale = self.start_scale + fraction * (self.end_scale - self.start_scale);
-        data.scale.x = scale;
-        data.scale.y = scale;
-        data.scale.z = scale;
+        //data.scale.x = scale;
+        //data.scale.y = scale;
+        //data.scale.z = scale;
     }
 }

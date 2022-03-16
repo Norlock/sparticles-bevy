@@ -134,8 +134,9 @@ pub struct ParticleAttributes {
 }
 
 #[derive(Component)]
-pub struct Meshes {
+pub struct Materials {
     particle_mesh: Handle<Mesh>,
+    particle_material: Handle<StandardMaterial>,
 }
 
 const EMIT_RADIANS: f32 = 90_f32 * (std::f32::consts::PI / 180_f32); // 0 deg will be emitting above
@@ -214,10 +215,11 @@ fn apply_animations_system(
             if let Ok((mut velocity, handle, mut transform, life_cycle)) =
                 particles_query.get_mut(particle_entity)
             {
-                let material = &mut materials.get_mut(handle).unwrap();
+                //let material = &mut materials.get_mut(handle).unwrap();
 
+                let mut color = Color::rgba(0., 0., 0., 1.);
                 let mut data = AnimationData {
-                    color: &mut material.base_color,
+                    color: &mut color,
                     scale: &mut transform.scale,
                     velocity: &mut velocity,
                 };
@@ -316,7 +318,7 @@ fn spawn_particles_system(
             &EmitterParticleAttributes,
             &Position,
             &mut Particles,
-            &Meshes,
+            &Materials,
             Entity,
         ),
         With<Emitter>,
@@ -379,11 +381,7 @@ fn spawn_particles_system(
             let vz = particle_attributes.speed * bearing_radians.sin();
 
             let bundle = PbrBundle {
-                material: materials.add(StandardMaterial {
-                    base_color: particle_attributes.color,
-                    alpha_mode: AlphaMode::Blend,
-                    ..Default::default()
-                }),
+                material: meshes.particle_material.clone(),
                 mesh: meshes.particle_mesh.clone(),
                 transform: Transform {
                     translation: Vec3::new(x, y, z),
@@ -464,6 +462,7 @@ impl Emitter {
         options: EmitterOptions,
         commands: &mut Commands,
         mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
         elapsed_ms: u128,
     ) {
         let EmitterOptions {
@@ -512,11 +511,16 @@ impl Emitter {
             mass: particle_mass,
         };
 
-        let meshes = Meshes {
+        let meshes = Materials {
             particle_mesh: meshes.add(Mesh::from(shape::Icosphere {
                 radius: particle_radius,
                 ..Default::default()
             })),
+            particle_material: materials.add(StandardMaterial {
+                base_color: particle_color,
+                //alpha_mode: AlphaMode::Blend,
+                ..Default::default()
+            }),
         };
 
         let particles = Particles(Vec::new());
