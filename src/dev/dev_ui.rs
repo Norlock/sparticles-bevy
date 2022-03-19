@@ -3,6 +3,7 @@ use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 
 use crate::emitters::emitter::Particle;
+use crate::emitters::emitter::Velocity;
 
 pub struct DevUIPlugin;
 
@@ -181,7 +182,7 @@ const UPDATE_METRICS_MS: u128 = 500;
 
 fn update_metrics(
     mut metrics: ResMut<Metric>,
-    particle_query: Query<Entity, With<Particle>>,
+    particle_query: Query<&Velocity, With<Particle>>,
     diagnostics: ResMut<'_, Diagnostics>,
     time: Res<Time>,
 ) {

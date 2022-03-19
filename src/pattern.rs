@@ -53,7 +53,7 @@ pub fn shimmer_animations() -> AnimationOptions {
         until_ms: 5000,
     }));
 
-    animations.push(Box::new(StrayAnimation::new(0, 5000, 14.)));
+    animations.push(Box::new(StrayAnimation::new(0, 5000, 7.)));
 
     //animations.push(Box::new(SizeAnimation {
     //from_ms: 2000,
@@ -247,8 +247,8 @@ pub fn emitter_animations() -> Option<EmitterAnimationHandler> {
     let speed_1 = Box::new(EmitSpeedAnimation {
         from_ms: 0,
         until_ms: 2000,
-        from_speed: 40.,
-        to_speed: 80.,
+        from_speed: 30.,
+        to_speed: 40.,
     });
 
     //let speed_2 = Box::new(EmitSpeedAnimation {

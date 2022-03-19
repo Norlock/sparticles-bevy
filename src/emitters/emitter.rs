@@ -106,9 +106,6 @@ pub struct EmitterParticleAttributes {
 #[derive(Debug, Component)]
 pub struct Particle;
 
-#[derive(Debug, Component)]
-struct Particles(Vec<Entity>);
-
 #[derive(Component, Debug, Default)]
 pub struct Velocity {
     pub vx: f32,
@@ -145,64 +142,53 @@ pub struct EmitterPlugin;
 
 impl Plugin for EmitterPlugin {
     fn build(&self, app: &mut App) {
-        //app.add_system_set(
-        //SystemSet::new()
-        //.with_run_criteria(FixedTimestep::step(0.01667))
-        //.with_system(transform_particle_system)
-        //.with_system(spawn_particles_system)
-        //.with_system(apply_forces_system)
-        //.with_system(apply_animations_system)
-        //.with_system(remove_particles_system)
-        //.with_system(animate_emitter_system),
-        //);
         app.add_system(transform_particle_system)
-            .add_system(spawn_particles_system)
-            //.add_system(apply_forces_system)
-            //.add_system(apply_animations_system)
-            .add_system(remove_particles_system);
+            .add_system(spawn_particles_system);
+        //.add_system(apply_forces_system)
+        //.add_system(apply_animations_system)
+        //.add_system(remove_particles_system)
         //.add_system(animate_emitter_system);
     }
 }
 
 fn apply_forces_system(
-    mut particles_query: Query<(&mut Velocity, &Transform, &ParticleAttributes), With<Particle>>,
-    emitter_query: Query<(&ForceHandler, &Particles, &LifeCycle), With<Emitter>>,
+    mut particles_query: Query<
+        (&Parent, &mut Velocity, &Transform, &ParticleAttributes),
+        With<Particle>,
+    >,
+    emitter_query: Query<(&ForceHandler, &LifeCycle), With<Emitter>>,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
     let delta_seconds = time.delta_seconds();
 
-    for (force_handler, particles, life_cycle) in emitter_query.iter() {
+    for (parent, mut velocity, transform, attributes) in particles_query.iter_mut() {
+        let (force_handler, life_cycle) = emitter_query.get(parent.0).unwrap();
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
 
-        for &particle_entity in particles.0.iter() {
-            if let Ok((mut velocity, transform, attributes)) =
-                particles_query.get_mut(particle_entity)
-            {
-                let scale = &transform.scale;
-                let radius = Vec3::new(
-                    scale.x * attributes.radius,
-                    scale.y * attributes.radius,
-                    scale.z * attributes.radius,
-                );
+        let scale = &transform.scale;
+        let radius = Vec3::new(
+            scale.x * attributes.radius,
+            scale.y * attributes.radius,
+            scale.z * attributes.radius,
+        );
 
-                let mut data = ForceData {
-                    position: &transform.translation,
-                    velocity: &mut velocity,
-                    radius,
-                    mass: attributes.mass,
-                    delta_seconds,
-                };
+        let mut data = ForceData {
+            position: &transform.translation,
+            velocity: &mut velocity,
+            radius,
+            mass: attributes.mass,
+            delta_seconds,
+        };
 
-                force_handler.apply(&mut data, elapsed_ms);
-            }
-        }
+        force_handler.apply(&mut data, elapsed_ms);
     }
 }
 
 fn apply_animations_system(
     mut particles_query: Query<
         (
+            &Parent,
             &mut Velocity,
             &Handle<StandardMaterial>,
             &mut Transform,
@@ -210,84 +196,76 @@ fn apply_animations_system(
         ),
         With<Particle>,
     >,
-    mut emitter_query: Query<(&mut AnimationHandler, &Particles), With<Emitter>>,
+    mut emitter_query: Query<&mut AnimationHandler, With<Emitter>>,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (mut animation_handler, particles) in emitter_query.iter_mut() {
-        for &particle_entity in particles.0.iter() {
-            if let Ok((mut velocity, handle, mut transform, life_cycle)) =
-                particles_query.get_mut(particle_entity)
-            {
-                //let material = &mut materials.get_mut(handle).unwrap();
+    for (parent, mut velocity, handle, mut transform, life_cycle) in particles_query.iter_mut() {
+        let mut animation_handler = emitter_query.get_mut(parent.0).unwrap();
+        //let material = &mut materials.get_mut(handle).unwrap();
 
-                let mut color = Color::rgba(0., 0., 0., 1.);
-                let mut data = AnimationData {
-                    color: &mut color,
-                    scale: &mut transform.scale,
-                    velocity: &mut velocity,
-                };
+        let mut color = Color::rgba(0., 0., 0., 1.);
+        let mut data = AnimationData {
+            color: &mut color,
+            scale: &mut transform.scale,
+            velocity: &mut velocity,
+        };
 
-                animation_handler.apply(&mut data, life_cycle.elapsed_ms(total_elapsed_ms));
-            }
-        }
+        animation_handler.apply(&mut data, life_cycle.elapsed_ms(total_elapsed_ms));
     }
 }
 
 fn remove_particles_system(
-    particles_query: Query<(&Transform, &ParticleAttributes, &LifeCycle), With<Particle>>,
-    mut emitter_query: Query<(Option<&Bounds>, &mut Particles), With<Emitter>>,
+    particles_query: Query<
+        (Entity, &Parent, &Transform, &ParticleAttributes, &LifeCycle),
+        With<Particle>,
+    >,
+    emitter_query: Query<Option<&Bounds>>,
     mut commands: Commands,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (bounds, mut particles) in emitter_query.iter_mut() {
-        for index in (0..particles.0.len()).rev() {
-            let particle_entity = particles.0[index];
+    for (entity, parent, transform, attributes, life_cycle) in particles_query.iter() {
+        let bounds = emitter_query.get(parent.0).unwrap();
 
-            if let Ok((transform, attributes, life_cycle)) = particles_query.get(particle_entity) {
-                if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
-                    commands.entity(particle_entity).despawn();
-                    particles.0.swap_remove(index);
-                    continue;
-                }
+        if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
+            commands.entity(entity).despawn();
+            continue;
+        }
 
-                let translation = &transform.translation;
-                let diameter = attributes.radius * 2.;
+        let translation = &transform.translation;
+        let diameter = attributes.radius * 2.;
 
-                if let Some(bounds) = bounds {
-                    let below_x = bounds
-                        .start_x
-                        .map_or(false, |start_x| translation.x < start_x);
+        if let Some(bounds) = bounds {
+            let below_x = bounds
+                .start_x
+                .map_or(false, |start_x| translation.x < start_x);
 
-                    let below_y = bounds
-                        .start_y
-                        .map_or(false, |start_y| translation.y < start_y);
+            let below_y = bounds
+                .start_y
+                .map_or(false, |start_y| translation.y < start_y);
 
-                    let below_z = bounds
-                        .start_z
-                        .map_or(false, |start_z| translation.z < start_z);
+            let below_z = bounds
+                .start_z
+                .map_or(false, |start_z| translation.z < start_z);
 
-                    let above_x = bounds
-                        .end_x
-                        .map_or(false, |end_x| end_x < translation.x + diameter);
+            let above_x = bounds
+                .end_x
+                .map_or(false, |end_x| end_x < translation.x + diameter);
 
-                    let above_y = bounds
-                        .end_y
-                        .map_or(false, |end_y| end_y < translation.y + diameter);
+            let above_y = bounds
+                .end_y
+                .map_or(false, |end_y| end_y < translation.y + diameter);
 
-                    let above_z = bounds
-                        .end_z
-                        .map_or(false, |end_z| end_z < translation.z + diameter);
+            let above_z = bounds
+                .end_z
+                .map_or(false, |end_z| end_z < translation.z + diameter);
 
-                    if below_x || below_y || below_z || above_x || above_y || above_z {
-                        commands.entity(particle_entity).despawn();
-                        particles.0.swap_remove(index);
-                        continue;
-                    }
-                }
+            if below_x || below_y || below_z || above_x || above_y || above_z {
+                commands.entity(entity).despawn();
+                continue;
             }
         }
     }
@@ -300,18 +278,14 @@ fn transform_particle_system(
     let delta = time.delta_seconds();
 
     for (mut velocity, mut transform, attributes) in query.iter_mut() {
-        //let x_force = velocity.vx * attributes.mass;
-        //let y_force = velocity.vy * attributes.mass;
-        //let z_force = velocity.vz * attributes.mass;
+        let x_force = velocity.vx * attributes.mass;
+        let y_force = velocity.vy * attributes.mass;
+        let z_force = velocity.vz * attributes.mass;
 
-        //let friction_multiplier = 1. - attributes.friction_coefficient;
-        //velocity.vx = x_force * friction_multiplier / attributes.mass;
-        //velocity.vy = y_force * friction_multiplier / attributes.mass;
-        //velocity.vz = z_force * friction_multiplier / attributes.mass;
-
-        velocity.vx *= 0.98;
-        velocity.vy *= 0.98;
-        velocity.vz *= 0.98;
+        let friction_multiplier = 1. - attributes.friction_coefficient;
+        velocity.vx = x_force * friction_multiplier / attributes.mass;
+        velocity.vy = y_force * friction_multiplier / attributes.mass;
+        velocity.vz = z_force * friction_multiplier / attributes.mass;
 
         transform.translation.x += velocity.vx * delta;
         transform.translation.y += velocity.vy * delta;
@@ -326,35 +300,27 @@ fn spawn_particles_system(
             &EmitOptions,
             &EmitterParticleAttributes,
             &Position,
-            &mut Particles,
             &Materials,
+            Option<&Children>,
             Entity,
         ),
         With<Emitter>,
     >,
     mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (
-        mut life_cycle,
-        emit_options,
-        particle_attributes,
-        position,
-        mut particles,
-        meshes,
-        entity,
-    ) in query.iter_mut()
+    for (mut life_cycle, emit_options, particle_attributes, position, meshes, children, entity) in
+        query.iter_mut()
     {
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
         let out_of_time = life_cycle.duration_ms < elapsed_ms;
         let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
 
         if out_of_time {
-            if particles.0.is_empty() {
-                commands.entity(entity).despawn();
+            if children.is_none() {
+                commands.entity(entity).despawn_recursive();
             }
             return;
         } else if new_iteration == life_cycle.iteration {
@@ -364,6 +330,8 @@ fn spawn_particles_system(
         life_cycle.iteration = new_iteration;
 
         let mut rng = thread_rng();
+
+        //let mut particle_entities = Vec::new();
 
         for _ in 0..emit_options.particles_per_emission {
             let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
@@ -389,7 +357,7 @@ fn spawn_particles_system(
             let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
             let vz = particle_attributes.speed * bearing_radians.sin();
 
-            let bundle = PbrBundle {
+            let pbr_bundle = PbrBundle {
                 material: meshes.particle_material.clone(),
                 mesh: meshes.particle_mesh.clone(),
                 transform: Transform {
@@ -412,13 +380,13 @@ fn spawn_particles_system(
                 mass: particle_attributes.mass,
             };
 
-            let id = commands
+            let child = commands
                 .spawn()
-                .insert_bundle(bundle)
+                .insert_bundle(pbr_bundle)
+                .insert(Parent(entity))
                 .insert_bundle((speed, life_cycle, attributes, Particle))
                 .id();
-
-            particles.0.push(id);
+            //commands.entity(entity).push_children(&[child]);
         }
     }
 }
@@ -532,8 +500,6 @@ impl Emitter {
             }),
         };
 
-        let particles = Particles(Vec::new());
-
         let mut builder = commands.spawn();
         builder
             .insert(emit_options)
@@ -541,7 +507,6 @@ impl Emitter {
             .insert(emitter_position)
             .insert(spawn_options)
             .insert(meshes)
-            .insert(particles)
             .insert(emitter_velocity)
             .insert(Emitter);
 

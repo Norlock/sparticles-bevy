@@ -91,8 +91,7 @@ fn setup(
         particle_mass: 1.,
         particle_speed: 30.,
         particle_friction_coefficient: 0.005,
-        //force_handler: random_forces(),
-        force_handler: None,
+        force_handler: random_forces(),
         bounds: None,
         //bounds: Some(Bounds {
         //start_x: None,
@@ -102,10 +101,8 @@ fn setup(
         //end_y: None,
         //end_z: None,
         //}),
-        //emitter_animation_handler: emitter_animations(),
-        emitter_animation_handler: None,
-        //particle_animation_options: Some(shimmer_animations()),
-        particle_animation_options: None,
+        emitter_animation_handler: emitter_animations(),
+        particle_animation_options: Some(shimmer_animations()),
     };
 
     let total_elapsed_ms = time.time_since_startup().as_millis();
