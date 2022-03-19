@@ -7,11 +7,9 @@ use crate::pattern::random_forces;
 use crate::pattern::shimmer_animations;
 use dev::dev_camera::DevCameraPlugin;
 use dev::dev_ui::DevUIPlugin;
-use emitters::emitter::Bounds;
 use emitters::emitter::Velocity;
 use std::time::Duration;
 
-use crate::position::Position;
 use bevy::prelude::*;
 use emitters::emitter::{Emitter, EmitterOptions, EmitterPlugin};
 
@@ -26,7 +24,6 @@ mod grid;
 mod math;
 mod particle;
 mod pattern;
-mod position;
 mod trails;
 
 fn main() {
@@ -65,9 +62,8 @@ fn setup(
 
     commands.spawn_bundle(UiCameraBundle::default());
 
-    let emitter_position = Position::new(0., -20., 0.);
     let options = EmitterOptions {
-        emitter_position,
+        emitter_transform: Transform::from_xyz(0., -20., 0.),
         emitter_size: EmitterSize {
             length: 8.,
             depth: 4.,

@@ -1,7 +1,5 @@
-use bevy::core::Time;
-use bevy::ecs::system::Res;
+use bevy::prelude::Transform;
 
-use crate::position::Position;
 use std::fmt::Debug;
 
 use super::emitter::{EmitOptions, EmitterParticleAttributes, Velocity};
@@ -19,7 +17,7 @@ impl Debug for dyn EmitterAnimate {
 pub struct EmitterData<'a> {
     pub particle_attributes: &'a mut EmitterParticleAttributes,
     pub emit_options: &'a mut EmitOptions,
-    pub position: &'a mut Position,
+    pub transform: &'a mut Transform,
     pub velocity: &'a mut Velocity,
     pub delta_seconds: f32,
 }

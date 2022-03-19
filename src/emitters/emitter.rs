@@ -5,10 +5,8 @@ use crate::animations::animation_handler::AnimationOptions;
 use crate::emitters::emitter_animation_handler::EmitterAnimationHandler;
 use crate::forces::force::ForceData;
 use crate::forces::force_handler::ForceHandler;
-use bevy::core::FixedTimestep;
 //use crate::trails::trail_animation::TrailData;
 //use crate::trails::trail_handler::TrailHandler;
-use crate::Position;
 use bevy::prelude::*;
 use rand::prelude::ThreadRng;
 use rand::{thread_rng, Rng};
@@ -23,7 +21,7 @@ pub struct EmitterSize {
 }
 
 pub struct EmitterOptions {
-    pub emitter_position: Position,
+    pub emitter_transform: Transform,
     pub emitter_size: EmitterSize,
     pub emitter_duration: Duration,
     pub emitter_velocity: Velocity,
@@ -143,11 +141,11 @@ pub struct EmitterPlugin;
 impl Plugin for EmitterPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(transform_particle_system)
-            .add_system(spawn_particles_system);
-        //.add_system(apply_forces_system)
-        //.add_system(apply_animations_system)
-        //.add_system(remove_particles_system)
-        //.add_system(animate_emitter_system);
+            .add_system(spawn_particles_system)
+            .add_system(apply_forces_system)
+            .add_system(apply_animations_system)
+            .add_system(remove_particles_system)
+            .add_system(animate_emitter_system);
     }
 }
 
@@ -231,6 +229,7 @@ fn remove_particles_system(
         let bounds = emitter_query.get(parent.0).unwrap();
 
         if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
+            commands.entity(parent.0).remove_children(&[entity]);
             commands.entity(entity).despawn();
             continue;
         }
@@ -264,6 +263,7 @@ fn remove_particles_system(
                 .map_or(false, |end_z| end_z < translation.z + diameter);
 
             if below_x || below_y || below_z || above_x || above_y || above_z {
+                commands.entity(parent.0).remove_children(&[entity]);
                 commands.entity(entity).despawn();
                 continue;
             }
@@ -299,7 +299,6 @@ fn spawn_particles_system(
             &mut LifeCycle,
             &EmitOptions,
             &EmitterParticleAttributes,
-            &Position,
             &Materials,
             Option<&Children>,
             Entity,
@@ -311,7 +310,7 @@ fn spawn_particles_system(
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (mut life_cycle, emit_options, particle_attributes, position, meshes, children, entity) in
+    for (mut life_cycle, emit_options, particle_attributes, meshes, children, entity) in
         query.iter_mut()
     {
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
@@ -319,8 +318,10 @@ fn spawn_particles_system(
         let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
 
         if out_of_time {
-            if children.is_none() {
-                commands.entity(entity).despawn_recursive();
+            if let Some(children) = children {
+                if children.is_empty() {
+                    commands.entity(entity).despawn_recursive();
+                }
             }
             return;
         } else if new_iteration == life_cycle.iteration {
@@ -331,8 +332,6 @@ fn spawn_particles_system(
 
         let mut rng = thread_rng();
 
-        //let mut particle_entities = Vec::new();
-
         for _ in 0..emit_options.particles_per_emission {
             let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
             let emitter_depth = gen_abs_range(&mut rng, emit_options.emitter_size.depth);
@@ -341,9 +340,9 @@ fn spawn_particles_system(
             let Angles { elevation, bearing } = emit_options.angle_radians;
             // Used to emit perpendicular of emitter.
             let perpendicular = elevation.cos() * -1.;
-            let x = (position.x + distortion) + emitter_length * perpendicular * bearing.cos();
-            let y = (position.y + distortion) + emitter_length * elevation.sin() * bearing.cos();
-            let z = (position.z + distortion + emitter_depth) + emitter_length * bearing.sin();
+            let x = distortion + emitter_length * perpendicular * bearing.cos();
+            let y = distortion + emitter_length * elevation.sin() * bearing.cos();
+            let z = (distortion + emitter_depth) + emitter_length * bearing.sin();
 
             let diffusion_elevation_delta =
                 gen_dyn_range(&mut rng, emit_options.diffusion_radians.elevation);
@@ -380,13 +379,12 @@ fn spawn_particles_system(
                 mass: particle_attributes.mass,
             };
 
-            let child = commands
+            commands
                 .spawn()
                 .insert_bundle(pbr_bundle)
                 .insert(Parent(entity))
                 .insert_bundle((speed, life_cycle, attributes, Particle))
                 .id();
-            //commands.entity(entity).push_children(&[child]);
         }
     }
 }
@@ -397,7 +395,7 @@ fn animate_emitter_system(
             &LifeCycle,
             &mut EmitOptions,
             &mut EmitterParticleAttributes,
-            &mut Position,
+            &mut Transform,
             &mut Velocity,
             &mut EmitterAnimationHandler,
         ),
@@ -412,7 +410,7 @@ fn animate_emitter_system(
         life_cycle,
         mut emit_options,
         mut particle_attr,
-        mut position,
+        mut transform,
         mut velocity,
         mut anim_handler,
     ) in query.iter_mut()
@@ -420,17 +418,17 @@ fn animate_emitter_system(
         let mut data = EmitterData {
             particle_attributes: &mut particle_attr,
             emit_options: &mut emit_options,
-            position: &mut position,
+            transform: &mut transform,
             velocity: &mut velocity,
             delta_seconds,
         };
 
         anim_handler.animate(&mut data, life_cycle.elapsed_ms(total_elapsed_ms));
 
-        position.x += velocity.vx * delta_seconds;
-        position.y += velocity.vy * delta_seconds;
-        position.z += velocity.vz * delta_seconds;
-        //println!("{:?} {:?}", position, velocity);
+        let translation = &mut transform.translation;
+        translation.x += velocity.vx * delta_seconds;
+        translation.y += velocity.vy * delta_seconds;
+        translation.z += velocity.vz * delta_seconds;
     }
 }
 
@@ -443,7 +441,7 @@ impl Emitter {
         elapsed_ms: u128,
     ) {
         let EmitterOptions {
-            emitter_position,
+            emitter_transform,
             emitter_size,
             emitter_duration,
             angle_degrees,
@@ -500,14 +498,19 @@ impl Emitter {
             }),
         };
 
+        let pbr_bundle = PbrBundle {
+            transform: emitter_transform,
+            ..Default::default()
+        };
+
         let mut builder = commands.spawn();
         builder
             .insert(emit_options)
             .insert(emit_time)
-            .insert(emitter_position)
             .insert(spawn_options)
             .insert(meshes)
             .insert(emitter_velocity)
+            .insert_bundle(pbr_bundle)
             .insert(Emitter);
 
         if let Some(bounds) = bounds {

@@ -23,7 +23,7 @@ impl EmitterAnimate for LooseMovementAnimation {
         stray_velocity(&mut data.velocity, self.stray_radians);
 
         // Add forces to avoid flying off.
-        let position = &data.position;
+        let position = &data.transform.translation;
         let velocity = &mut data.velocity;
         let emitter_size = &mut data.emit_options.emitter_size;
 

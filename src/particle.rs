@@ -3,8 +3,6 @@ use bevy::render::color::Color;
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::position::Position;
-
 #[derive(Debug)]
 pub struct Particle {
     pub queue_frame: u64,
@@ -199,9 +197,9 @@ impl Particle {
         //}
     }
 
-    pub fn draw(&mut self, grid_position: &Position) {
-        let x = self.x + grid_position.x;
-        let y = self.y + grid_position.y;
+    pub fn draw(&mut self) {
+        let x = self.x;
+        let y = self.y;
 
         //if let Some(trail_handler) = &mut self.trail_handler {
         //let elapsed_ms = self.lifetime.elapsed().as_millis();

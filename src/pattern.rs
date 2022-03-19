@@ -27,8 +27,6 @@ use bevy::math::Vec3;
 use bevy::render::color::Color;
 use std::time::Duration;
 
-use crate::position::Position;
-
 pub fn shimmer_animations() -> AnimationOptions {
     let mut animations: Vec<Box<dyn Animate + Sync + Send>> = Vec::new();
 

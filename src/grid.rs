@@ -4,8 +4,6 @@ use crate::particle::Particle;
 use bevy::prelude::*;
 use std::time::Instant;
 
-use crate::position::Position;
-
 #[derive(Debug)]
 pub struct Grid {
     //pub possibility_spots: Vec<Vec<Particle>>,
@@ -16,7 +14,7 @@ pub struct Grid {
     pub possibility_y_count: usize,
     pub possibility_z_count: usize,
     pub possibility_side_length: usize,
-    pub position: Position,
+    //pub position: Position,
     pub frame: u64,
     pub cell_width: usize,
     pub cell_height: usize,
@@ -37,7 +35,7 @@ pub struct GridOptions {
     pub possibility_y_count: usize,
     pub possibility_z_count: usize,
     pub possibility_side_length: usize,
-    pub position: Position,
+    //pub position: Position,
     //pub force_handler: Option<ForceHandler>,
 }
 
@@ -67,7 +65,6 @@ impl Grid {
             possibility_y_count,
             possibility_z_count,
             possibility_side_length,
-            position,
             //force_handler,
         } = options;
         let cell_width = possibility_x_count * possibility_side_length;
@@ -85,7 +82,6 @@ impl Grid {
             possibility_y_count,
             possibility_z_count,
             possibility_side_length,
-            position,
             //possibility_spots,
             cell_width,
             cell_height,
