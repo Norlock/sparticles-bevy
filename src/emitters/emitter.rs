@@ -123,9 +123,10 @@ impl Velocity {
 
 #[derive(Debug, Component)]
 pub struct ParticleAttributes {
-    radius: f32,
-    mass: f32,
-    friction_coefficient: f32,
+    pub radius: f32,
+    pub mass: f32,
+    pub friction_coefficient: f32,
+    pub color: Color,
 }
 
 #[derive(Component)]
@@ -141,7 +142,6 @@ pub struct EmitterPlugin;
 impl Plugin for EmitterPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(transform_particle_system)
-            //.add_system(spawn_particles_system)
             .add_system(apply_forces_system)
             .add_system(apply_animations_system)
             .add_system(remove_particles_system)
@@ -185,13 +185,7 @@ fn apply_forces_system(
 
 fn apply_animations_system(
     mut particles_query: Query<
-        (
-            &Parent,
-            &mut Velocity,
-            &Handle<StandardMaterial>,
-            &mut Transform,
-            &LifeCycle,
-        ),
+        (&Parent, &mut Velocity, &mut Transform, &LifeCycle),
         With<Particle>,
     >,
     mut emitter_query: Query<&mut AnimationHandler, With<Emitter>>,
@@ -199,7 +193,7 @@ fn apply_animations_system(
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (parent, mut velocity, handle, mut transform, life_cycle) in particles_query.iter_mut() {
+    for (parent, mut velocity, mut transform, life_cycle) in particles_query.iter_mut() {
         let mut animation_handler = emitter_query.get_mut(parent.0).unwrap();
         //let material = &mut materials.get_mut(handle).unwrap();
 
@@ -374,6 +368,7 @@ fn spawn_particles_system(
                 friction_coefficient: particle_attributes.friction_coefficient,
                 radius: particle_attributes.radius,
                 mass: particle_attributes.mass,
+                color: particle_attributes.color,
             };
 
             commands

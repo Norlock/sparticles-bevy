@@ -3,6 +3,8 @@ use crate::emitters::emitter::gen_dyn_range;
 use crate::emitters::emitter::EmitOptions;
 use crate::emitters::emitter::EmitterParticleAttributes;
 use crate::emitters::emitter::LifeCycle;
+use crate::emitters::emitter::Particle;
+use crate::emitters::emitter::ParticleAttributes;
 use crate::emitters::emitter::Velocity;
 use crate::Angles;
 use crate::Emitter;
@@ -38,11 +40,6 @@ pub struct InstanceData {
     position: Vec3,
     scale: f32,
     color: [f32; 4],
-    mass: f32,
-    vx: f32,
-    vy: f32,
-    vz: f32,
-    friction_coefficient: f32,
 }
 
 pub struct ShaderPlugin;
@@ -50,7 +47,8 @@ pub struct ShaderPlugin;
 impl Plugin for ShaderPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_shader)
-            .add_plugin(CustomMaterialPlugin);
+            .add_plugin(CustomMaterialPlugin)
+            .add_system(spawn_particles);
     }
 }
 
@@ -87,27 +85,30 @@ impl Plugin for CustomMaterialPlugin {
             .init_resource::<CustomPipeline>()
             .init_resource::<SpecializedPipelines<CustomPipeline>>()
             .add_system_to_stage(RenderStage::Queue, queue_custom)
-            .add_system_to_stage(RenderStage::Extract, transform_particles)
-            .add_system_to_stage(RenderStage::Extract, spawn_particles)
+            .add_system_to_stage(RenderStage::Extract, prepare_particles)
             .add_system_to_stage(RenderStage::Prepare, prepare_instance_buffers);
     }
 }
 
 fn spawn_particles(
     time: Res<Time>,
-    mut instance_query: Query<&mut InstanceMaterialData>,
     mut emitter_query: Query<
-        (&mut LifeCycle, &EmitOptions, &EmitterParticleAttributes),
+        (
+            Entity,
+            &mut LifeCycle,
+            &EmitOptions,
+            &EmitterParticleAttributes,
+        ),
         With<Emitter>,
     >,
+    mut commands: Commands,
 ) {
     //event!(Level::INFO, "test2");
 
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    let mut instance_data = instance_query.single_mut();
-
-    for (mut life_cycle, emit_options, particle_attributes) in emitter_query.iter_mut() {
+    for (emitter_id, mut life_cycle, emit_options, particle_attributes) in emitter_query.iter_mut()
+    {
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
         let out_of_time = life_cycle.duration_ms < elapsed_ms;
         let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
@@ -146,38 +147,58 @@ fn spawn_particles(
             let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
             let vz = particle_attributes.speed * bearing_radians.sin();
 
-            instance_data.0.push(InstanceData {
-                position: Vec3::new(x, y, z),
-                scale: 1.,
-                color: particle_attributes.color.as_rgba_f32(),
-                mass: particle_attributes.mass,
+            let speed = Velocity { vx, vy, vz };
+            let life_cycle = LifeCycle {
+                spawned_at: total_elapsed_ms,
+                duration_ms: particle_attributes.duration_ms,
+                iteration: -1,
+            };
+
+            let attributes = ParticleAttributes {
                 friction_coefficient: particle_attributes.friction_coefficient,
-                vx,
-                vy,
-                vz,
-            });
+                radius: particle_attributes.radius,
+                mass: particle_attributes.mass,
+                color: particle_attributes.color,
+            };
+
+            commands
+                .spawn()
+                .insert(Parent(emitter_id))
+                .insert_bundle((
+                    speed,
+                    life_cycle,
+                    attributes,
+                    Particle,
+                    Transform::from_xyz(x, y, z),
+                ))
+                .id();
+
+            //let mut instance_data = instance_query.single_mut();
+            //instance_data.0.push(InstanceData {
+            //position: Vec3::new(x, y, z),
+            //scale: 1.,
+            //color: particle_attributes.color.as_rgba_f32(),
+            //});
         }
     }
 }
 
-fn transform_particles(mut query: Query<&mut InstanceMaterialData>, time: Res<Time>) {
-    let mut instance_data = query.single_mut();
-    let delta = time.delta_seconds();
+fn prepare_particles(
+    mut instance_query: Query<&mut InstanceMaterialData>,
+    particle_query: Query<(&Transform, &ParticleAttributes), With<Particle>>,
+) {
+    let mut instances = Vec::new();
+    let mut instance_data = instance_query.single_mut();
 
-    for item in instance_data.0.iter_mut() {
-        let x_force = item.vx * item.mass;
-        let y_force = item.vy * item.mass;
-        let z_force = item.vz * item.mass;
-
-        let friction_multiplier = 1. - item.friction_coefficient;
-        item.vx = x_force * friction_multiplier / item.mass;
-        item.vy = y_force * friction_multiplier / item.mass;
-        item.vz = z_force * friction_multiplier / item.mass;
-
-        item.position.x += item.vx * delta;
-        item.position.y += item.vy * delta;
-        item.position.z += item.vz * delta;
+    for (transform, attributes) in particle_query.iter() {
+        instances.push(InstanceData {
+            position: transform.translation,
+            color: attributes.color.as_rgba_f32(),
+            scale: 1.,
+        });
     }
+
+    instance_data.0 = instances;
 }
 
 fn queue_custom(
