@@ -28,14 +28,13 @@ use bevy::{
 };
 use bytemuck::{Pod, Zeroable};
 use rand::thread_rng;
-use tracing::{event, Level};
 
 #[derive(Component)]
-struct InstanceMaterialData(Vec<ParticleData>);
+pub struct InstanceMaterialData(pub Vec<InstanceData>);
 
 #[derive(Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
-struct ParticleData {
+pub struct InstanceData {
     position: Vec3,
     scale: f32,
     color: [f32; 4],
@@ -43,6 +42,7 @@ struct ParticleData {
     vx: f32,
     vy: f32,
     vz: f32,
+    friction_coefficient: f32,
 }
 
 pub struct ShaderPlugin;
@@ -146,15 +146,16 @@ fn spawn_particles(
             let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
             let vz = particle_attributes.speed * bearing_radians.sin();
 
-            instance_data.0.push(ParticleData {
+            instance_data.0.push(InstanceData {
                 position: Vec3::new(x, y, z),
                 scale: 1.,
                 color: particle_attributes.color.as_rgba_f32(),
                 mass: particle_attributes.mass,
+                friction_coefficient: particle_attributes.friction_coefficient,
                 vx,
                 vy,
                 vz,
-            })
+            });
         }
     }
 }
@@ -168,7 +169,7 @@ fn transform_particles(mut query: Query<&mut InstanceMaterialData>, time: Res<Ti
         let y_force = item.vy * item.mass;
         let z_force = item.vz * item.mass;
 
-        let friction_multiplier = 1. - 0.01; //attributes.friction_coefficient;
+        let friction_multiplier = 1. - item.friction_coefficient;
         item.vx = x_force * friction_multiplier / item.mass;
         item.vy = y_force * friction_multiplier / item.mass;
         item.vz = z_force * friction_multiplier / item.mass;
@@ -266,7 +267,7 @@ impl SpecializedPipeline for CustomPipeline {
         let mut descriptor = self.mesh_pipeline.specialize(key);
         descriptor.vertex.shader = self.shader.clone();
         descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: std::mem::size_of::<ParticleData>() as u64,
+            array_stride: std::mem::size_of::<InstanceData>() as u64,
             step_mode: VertexStepMode::Instance,
             attributes: vec![
                 VertexAttribute {

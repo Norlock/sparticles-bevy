@@ -1,3 +1,4 @@
+use crate::shaders::shader::InstanceMaterialData;
 use bevy::diagnostic::Diagnostics;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
@@ -182,7 +183,7 @@ const UPDATE_METRICS_MS: u128 = 500;
 
 fn update_metrics(
     mut metrics: ResMut<Metric>,
-    particle_query: Query<&Velocity, With<Particle>>,
+    particle_query: Query<&InstanceMaterialData>,
     diagnostics: ResMut<'_, Diagnostics>,
     time: Res<Time>,
 ) {
@@ -208,5 +209,5 @@ fn update_metrics(
     metrics.fps = fps;
     metrics.frame_time = frame_time;
     metrics.last_updated_ms = total_elapsed_ms;
-    metrics.particle_count = particle_query.iter().count();
+    metrics.particle_count = particle_query.single().0.len();
 }
