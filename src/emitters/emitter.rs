@@ -359,10 +359,7 @@ fn spawn_particles_system(
             let pbr_bundle = PbrBundle {
                 material: meshes.particle_material.clone(),
                 mesh: meshes.particle_mesh.clone(),
-                transform: Transform {
-                    translation: Vec3::new(x, y, z),
-                    ..Default::default()
-                },
+                transform: Transform::from_xyz(x, y, z),
                 ..Default::default()
             };
 

@@ -8,22 +8,23 @@ use crate::pattern::shimmer_animations;
 use dev::dev_camera::DevCameraPlugin;
 use dev::dev_ui::DevUIPlugin;
 use emitters::emitter::Velocity;
+use shaders::shader::ShaderPlugin;
 use std::time::Duration;
 
 use bevy::prelude::*;
 use emitters::emitter::{Emitter, EmitterOptions, EmitterPlugin};
 
+mod angles;
 mod animations;
 mod collision;
-mod emitters;
-//mod fill_style;
-mod angles;
 mod dev;
+mod emitters;
 mod forces;
 mod grid;
 mod math;
 mod particle;
 mod pattern;
+mod shaders;
 mod trails;
 
 fn main() {
@@ -33,6 +34,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(DevUIPlugin)
         .add_plugin(DevCameraPlugin)
+        .add_plugin(ShaderPlugin)
         .add_plugin(EmitterPlugin)
         .run();
 }
