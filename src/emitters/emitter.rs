@@ -145,7 +145,8 @@ impl Plugin for EmitterPlugin {
             .add_system(apply_forces_system)
             .add_system(apply_animations_system)
             .add_system(remove_particles_system)
-            .add_system(animate_emitter_system);
+            .add_system(animate_emitter_system)
+            .add_system(spawn_particles);
     }
 }
 
@@ -222,9 +223,13 @@ fn remove_particles_system(
     for (entity, parent, transform, attributes, life_cycle) in particles_query.iter() {
         let bounds = emitter_query.get(parent.0).unwrap();
 
-        if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
+        let mut remove = || {
             commands.entity(parent.0).remove_children(&[entity]);
             commands.entity(entity).despawn();
+        };
+
+        if life_cycle.duration_ms < life_cycle.elapsed_ms(total_elapsed_ms) {
+            remove();
             continue;
         }
 
@@ -257,8 +262,7 @@ fn remove_particles_system(
                 .map_or(false, |end_z| end_z < translation.z + diameter);
 
             if below_x || below_y || below_z || above_x || above_y || above_z {
-                commands.entity(parent.0).remove_children(&[entity]);
-                commands.entity(entity).despawn();
+                remove();
                 continue;
             }
         }
@@ -287,25 +291,26 @@ fn transform_particle_system(
     }
 }
 
-fn spawn_particles_system(
-    mut query: Query<
+fn spawn_particles(
+    time: Res<Time>,
+    mut emitter_query: Query<
         (
+            Entity,
             &mut LifeCycle,
             &EmitOptions,
             &EmitterParticleAttributes,
-            &Materials,
             Option<&Children>,
-            Entity,
         ),
         With<Emitter>,
     >,
     mut commands: Commands,
-    time: Res<Time>,
 ) {
+    //event!(Level::INFO, "test2");
+
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (mut life_cycle, emit_options, particle_attributes, meshes, children, entity) in
-        query.iter_mut()
+    for (emitter_id, mut life_cycle, emit_options, particle_attributes, children) in
+        emitter_query.iter_mut()
     {
         let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
         let out_of_time = life_cycle.duration_ms < elapsed_ms;
@@ -314,7 +319,7 @@ fn spawn_particles_system(
         if out_of_time {
             if let Some(children) = children {
                 if children.is_empty() {
-                    commands.entity(entity).despawn_recursive();
+                    commands.entity(emitter_id).despawn_recursive();
                 }
             }
             continue;
@@ -325,6 +330,8 @@ fn spawn_particles_system(
         life_cycle.iteration = new_iteration;
 
         let mut rng = thread_rng();
+
+        let mut particles = Vec::new();
 
         for _ in 0..emit_options.particles_per_emission {
             let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
@@ -350,13 +357,6 @@ fn spawn_particles_system(
             let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
             let vz = particle_attributes.speed * bearing_radians.sin();
 
-            let pbr_bundle = PbrBundle {
-                material: meshes.particle_material.clone(),
-                mesh: meshes.particle_mesh.clone(),
-                transform: Transform::from_xyz(x, y, z),
-                ..Default::default()
-            };
-
             let speed = Velocity { vx, vy, vz };
             let life_cycle = LifeCycle {
                 spawned_at: total_elapsed_ms,
@@ -371,13 +371,17 @@ fn spawn_particles_system(
                 color: particle_attributes.color,
             };
 
-            commands
-                .spawn()
-                .insert_bundle(pbr_bundle)
-                .insert(Parent(entity))
-                .insert_bundle((speed, life_cycle, attributes, Particle))
-                .id();
+            particles.push((
+                Parent(emitter_id),
+                speed,
+                life_cycle,
+                attributes,
+                Particle,
+                Transform::from_xyz(x, y, z),
+            ));
         }
+
+        commands.spawn_batch(particles);
     }
 }
 

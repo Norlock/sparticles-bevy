@@ -1,13 +1,7 @@
-use crate::emitters::emitter::gen_abs_range;
-use crate::emitters::emitter::gen_dyn_range;
-use crate::emitters::emitter::EmitOptions;
-use crate::emitters::emitter::EmitterParticleAttributes;
-use crate::emitters::emitter::LifeCycle;
+use std::time::Instant;
+
 use crate::emitters::emitter::Particle;
 use crate::emitters::emitter::ParticleAttributes;
-use crate::emitters::emitter::Velocity;
-use crate::Angles;
-use crate::Emitter;
 use bevy::{
     core_pipeline::Transparent3d,
     ecs::system::{lifetimeless::*, SystemParamItem},
@@ -29,7 +23,6 @@ use bevy::{
     },
 };
 use bytemuck::{Pod, Zeroable};
-use rand::thread_rng;
 
 #[derive(Component)]
 pub struct InstanceMaterialData(pub Vec<InstanceData>);
@@ -47,8 +40,7 @@ pub struct ShaderPlugin;
 impl Plugin for ShaderPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_shader)
-            .add_plugin(CustomMaterialPlugin)
-            .add_system(spawn_particles);
+            .add_plugin(CustomMaterialPlugin);
     }
 }
 
@@ -84,102 +76,9 @@ impl Plugin for CustomMaterialPlugin {
             .add_render_command::<Transparent3d, DrawCustom>()
             .init_resource::<CustomPipeline>()
             .init_resource::<SpecializedPipelines<CustomPipeline>>()
-            .add_system_to_stage(RenderStage::Queue, queue_custom)
             .add_system_to_stage(RenderStage::Extract, prepare_particles)
+            .add_system_to_stage(RenderStage::Queue, queue_custom)
             .add_system_to_stage(RenderStage::Prepare, prepare_instance_buffers);
-    }
-}
-
-fn spawn_particles(
-    time: Res<Time>,
-    mut emitter_query: Query<
-        (
-            Entity,
-            &mut LifeCycle,
-            &EmitOptions,
-            &EmitterParticleAttributes,
-        ),
-        With<Emitter>,
-    >,
-    mut commands: Commands,
-) {
-    //event!(Level::INFO, "test2");
-
-    let total_elapsed_ms = time.time_since_startup().as_millis();
-
-    for (emitter_id, mut life_cycle, emit_options, particle_attributes) in emitter_query.iter_mut()
-    {
-        let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
-        let out_of_time = life_cycle.duration_ms < elapsed_ms;
-        let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
-
-        if out_of_time {
-            continue;
-        } else if new_iteration == life_cycle.iteration {
-            continue;
-        }
-
-        life_cycle.iteration = new_iteration;
-
-        let mut rng = thread_rng();
-
-        for _ in 0..emit_options.particles_per_emission {
-            let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
-            let emitter_depth = gen_abs_range(&mut rng, emit_options.emitter_size.depth);
-            let distortion = gen_dyn_range(&mut rng, emit_options.emission_distortion);
-
-            let Angles { elevation, bearing } = emit_options.angle_radians;
-            // Used to emit perpendicular of emitter.
-            let perpendicular = elevation.cos() * -1.;
-            let x = distortion + emitter_length * perpendicular * bearing.cos();
-            let y = distortion + emitter_length * elevation.sin() * bearing.cos();
-            let z = (distortion + emitter_depth) + emitter_length * bearing.sin();
-
-            let diffusion_elevation_delta =
-                gen_dyn_range(&mut rng, emit_options.diffusion_radians.elevation);
-            let bearing_radians = gen_dyn_range(&mut rng, emit_options.diffusion_radians.bearing);
-            let elevation_radians =
-                emit_options.angle_emission_radians() + diffusion_elevation_delta;
-
-            // Used to emit perpendicular of emitter.
-            let perpendicular = elevation_radians.cos() * -1.;
-            let vx = particle_attributes.speed * perpendicular * bearing_radians.cos();
-            let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
-            let vz = particle_attributes.speed * bearing_radians.sin();
-
-            let speed = Velocity { vx, vy, vz };
-            let life_cycle = LifeCycle {
-                spawned_at: total_elapsed_ms,
-                duration_ms: particle_attributes.duration_ms,
-                iteration: -1,
-            };
-
-            let attributes = ParticleAttributes {
-                friction_coefficient: particle_attributes.friction_coefficient,
-                radius: particle_attributes.radius,
-                mass: particle_attributes.mass,
-                color: particle_attributes.color,
-            };
-
-            commands
-                .spawn()
-                .insert(Parent(emitter_id))
-                .insert_bundle((
-                    speed,
-                    life_cycle,
-                    attributes,
-                    Particle,
-                    Transform::from_xyz(x, y, z),
-                ))
-                .id();
-
-            //let mut instance_data = instance_query.single_mut();
-            //instance_data.0.push(InstanceData {
-            //position: Vec3::new(x, y, z),
-            //scale: 1.,
-            //color: particle_attributes.color.as_rgba_f32(),
-            //});
-        }
     }
 }
 
@@ -188,7 +87,7 @@ fn prepare_particles(
     particle_query: Query<(&Transform, &ParticleAttributes), With<Particle>>,
 ) {
     let mut instances = Vec::new();
-    let mut instance_data = instance_query.single_mut();
+    // TODO kijken of dit nog verbeterd kan worden, bijvoorbeeld de huidige array gebruiken.
 
     for (transform, attributes) in particle_query.iter() {
         instances.push(InstanceData {
@@ -198,6 +97,7 @@ fn prepare_particles(
         });
     }
 
+    let mut instance_data = instance_query.single_mut();
     instance_data.0 = instances;
 }
 
