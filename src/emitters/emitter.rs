@@ -62,10 +62,10 @@ pub struct Bounds {
 pub struct Emitter;
 
 #[derive(Debug, Component)]
-struct LifeCycle {
-    spawned_at: u128,
-    duration_ms: u128,
-    iteration: i32,
+pub struct LifeCycle {
+    pub spawned_at: u128,
+    pub duration_ms: u128,
+    pub iteration: i32,
 }
 
 impl LifeCycle {
@@ -104,7 +104,7 @@ pub struct EmitterParticleAttributes {
 #[derive(Debug, Component)]
 pub struct Particle;
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Velocity {
     pub vx: f32,
     pub vy: f32,
@@ -141,7 +141,7 @@ pub struct EmitterPlugin;
 impl Plugin for EmitterPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(transform_particle_system)
-            .add_system(spawn_particles_system)
+            //.add_system(spawn_particles_system)
             .add_system(apply_forces_system)
             .add_system(apply_animations_system)
             .add_system(remove_particles_system)
@@ -323,9 +323,9 @@ fn spawn_particles_system(
                     commands.entity(entity).despawn_recursive();
                 }
             }
-            return;
+            continue;
         } else if new_iteration == life_cycle.iteration {
-            return;
+            continue;
         }
 
         life_cycle.iteration = new_iteration;
@@ -550,7 +550,7 @@ impl Emitter {
     ////}
 }
 
-fn gen_dyn_range(rng: &mut ThreadRng, val: f32) -> f32 {
+pub fn gen_dyn_range(rng: &mut ThreadRng, val: f32) -> f32 {
     if 0. < val {
         rng.gen_range(-val..val)
     } else {
@@ -558,7 +558,7 @@ fn gen_dyn_range(rng: &mut ThreadRng, val: f32) -> f32 {
     }
 }
 
-fn gen_abs_range(rng: &mut ThreadRng, val: f32) -> f32 {
+pub fn gen_abs_range(rng: &mut ThreadRng, val: f32) -> f32 {
     if 0. < val {
         rng.gen_range(0_f32..val)
     } else {

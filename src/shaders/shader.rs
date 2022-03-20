@@ -1,3 +1,11 @@
+use crate::emitters::emitter::gen_abs_range;
+use crate::emitters::emitter::gen_dyn_range;
+use crate::emitters::emitter::EmitOptions;
+use crate::emitters::emitter::EmitterParticleAttributes;
+use crate::emitters::emitter::LifeCycle;
+use crate::emitters::emitter::Velocity;
+use crate::Angles;
+use crate::Emitter;
 use bevy::{
     core_pipeline::Transparent3d,
     ecs::system::{lifetimeless::*, SystemParamItem},
@@ -19,13 +27,29 @@ use bevy::{
     },
 };
 use bytemuck::{Pod, Zeroable};
+use rand::thread_rng;
+use tracing::{event, Level};
+
+#[derive(Component)]
+struct InstanceMaterialData(Vec<ParticleData>);
+
+#[derive(Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+struct ParticleData {
+    position: Vec3,
+    scale: f32,
+    color: [f32; 4],
+    mass: f32,
+    vx: f32,
+    vy: f32,
+    vz: f32,
+}
 
 pub struct ShaderPlugin;
 
 impl Plugin for ShaderPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_shader)
-            //.add_system(change_color_system)
             .add_plugin(CustomMaterialPlugin);
     }
 }
@@ -33,28 +57,17 @@ impl Plugin for ShaderPlugin {
 fn setup_shader(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.spawn().insert_bundle((
         meshes.add(Mesh::from(shape::Icosphere {
-            radius: 0.5,
+            radius: 0.1,
             ..Default::default()
         })),
         Transform::from_xyz(0.0, 0.0, 0.0),
         GlobalTransform::default(),
-        InstanceMaterialData(
-            (1..=10)
-                .flat_map(|x| (1..=10).map(move |y| (x as f32 / 10.0, y as f32 / 10.0)))
-                .map(|(x, y)| InstanceData {
-                    position: Vec3::new(x * 10.0 - 5.0, y * 10.0 - 5.0, 0.0),
-                    scale: 1.0,
-                    color: Color::hsla(x * 360., y, 0.5, 1.0).as_rgba_f32(),
-                })
-                .collect(),
-        ),
+        InstanceMaterialData(Vec::new()),
         Visibility::default(),
         ComputedVisibility::default(),
     ));
 }
 
-#[derive(Component)]
-struct InstanceMaterialData(Vec<InstanceData>);
 impl ExtractComponent for InstanceMaterialData {
     type Query = &'static InstanceMaterialData;
     type Filter = ();
@@ -74,16 +87,96 @@ impl Plugin for CustomMaterialPlugin {
             .init_resource::<CustomPipeline>()
             .init_resource::<SpecializedPipelines<CustomPipeline>>()
             .add_system_to_stage(RenderStage::Queue, queue_custom)
+            .add_system_to_stage(RenderStage::Extract, transform_particles)
+            .add_system_to_stage(RenderStage::Extract, spawn_particles)
             .add_system_to_stage(RenderStage::Prepare, prepare_instance_buffers);
     }
 }
 
-#[derive(Clone, Copy, Pod, Zeroable)]
-#[repr(C)]
-struct InstanceData {
-    position: Vec3,
-    scale: f32,
-    color: [f32; 4],
+fn spawn_particles(
+    time: Res<Time>,
+    mut instance_query: Query<&mut InstanceMaterialData>,
+    mut emitter_query: Query<
+        (&mut LifeCycle, &EmitOptions, &EmitterParticleAttributes),
+        With<Emitter>,
+    >,
+) {
+    //event!(Level::INFO, "test2");
+
+    let total_elapsed_ms = time.time_since_startup().as_millis();
+
+    let mut instance_data = instance_query.single_mut();
+
+    for (mut life_cycle, emit_options, particle_attributes) in emitter_query.iter_mut() {
+        let elapsed_ms = life_cycle.elapsed_ms(total_elapsed_ms);
+        let out_of_time = life_cycle.duration_ms < elapsed_ms;
+        let new_iteration = elapsed_ms as i32 / emit_options.delay_between_emission_ms as i32;
+
+        if out_of_time {
+            continue;
+        } else if new_iteration == life_cycle.iteration {
+            continue;
+        }
+
+        life_cycle.iteration = new_iteration;
+
+        let mut rng = thread_rng();
+
+        for _ in 0..emit_options.particles_per_emission {
+            let emitter_length = gen_abs_range(&mut rng, emit_options.emitter_size.length);
+            let emitter_depth = gen_abs_range(&mut rng, emit_options.emitter_size.depth);
+            let distortion = gen_dyn_range(&mut rng, emit_options.emission_distortion);
+
+            let Angles { elevation, bearing } = emit_options.angle_radians;
+            // Used to emit perpendicular of emitter.
+            let perpendicular = elevation.cos() * -1.;
+            let x = distortion + emitter_length * perpendicular * bearing.cos();
+            let y = distortion + emitter_length * elevation.sin() * bearing.cos();
+            let z = (distortion + emitter_depth) + emitter_length * bearing.sin();
+
+            let diffusion_elevation_delta =
+                gen_dyn_range(&mut rng, emit_options.diffusion_radians.elevation);
+            let bearing_radians = gen_dyn_range(&mut rng, emit_options.diffusion_radians.bearing);
+            let elevation_radians =
+                emit_options.angle_emission_radians() + diffusion_elevation_delta;
+
+            // Used to emit perpendicular of emitter.
+            let perpendicular = elevation_radians.cos() * -1.;
+            let vx = particle_attributes.speed * perpendicular * bearing_radians.cos();
+            let vy = particle_attributes.speed * elevation_radians.sin() * bearing_radians.cos();
+            let vz = particle_attributes.speed * bearing_radians.sin();
+
+            instance_data.0.push(ParticleData {
+                position: Vec3::new(x, y, z),
+                scale: 1.,
+                color: particle_attributes.color.as_rgba_f32(),
+                mass: particle_attributes.mass,
+                vx,
+                vy,
+                vz,
+            })
+        }
+    }
+}
+
+fn transform_particles(mut query: Query<&mut InstanceMaterialData>, time: Res<Time>) {
+    let mut instance_data = query.single_mut();
+    let delta = time.delta_seconds();
+
+    for item in instance_data.0.iter_mut() {
+        let x_force = item.vx * item.mass;
+        let y_force = item.vy * item.mass;
+        let z_force = item.vz * item.mass;
+
+        let friction_multiplier = 1. - 0.01; //attributes.friction_coefficient;
+        item.vx = x_force * friction_multiplier / item.mass;
+        item.vy = y_force * friction_multiplier / item.mass;
+        item.vz = z_force * friction_multiplier / item.mass;
+
+        item.position.x += item.vx * delta;
+        item.position.y += item.vy * delta;
+        item.position.z += item.vz * delta;
+    }
 }
 
 fn queue_custom(
@@ -173,7 +266,7 @@ impl SpecializedPipeline for CustomPipeline {
         let mut descriptor = self.mesh_pipeline.specialize(key);
         descriptor.vertex.shader = self.shader.clone();
         descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: std::mem::size_of::<InstanceData>() as u64,
+            array_stride: std::mem::size_of::<ParticleData>() as u64,
             step_mode: VertexStepMode::Instance,
             attributes: vec![
                 VertexAttribute {
