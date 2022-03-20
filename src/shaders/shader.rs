@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use crate::emitters::emitter::Particle;
 use crate::emitters::emitter::ParticleAttributes;
 use bevy::{
@@ -25,11 +23,11 @@ use bevy::{
 use bytemuck::{Pod, Zeroable};
 
 #[derive(Component)]
-pub struct InstanceMaterialData(pub Vec<InstanceData>);
+struct InstanceMaterialData(Vec<InstanceData>);
 
 #[derive(Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
-pub struct InstanceData {
+struct InstanceData {
     position: Vec3,
     scale: f32,
     color: [f32; 4],
@@ -92,7 +90,7 @@ fn prepare_particles(
     for (transform, attributes) in particle_query.iter() {
         instances.push(InstanceData {
             position: transform.translation,
-            color: attributes.color.as_rgba_f32(),
+            color: attributes.color,
             scale: 1.,
         });
     }

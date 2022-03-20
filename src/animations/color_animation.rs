@@ -34,10 +34,13 @@ impl Animate for DuoColorAnimation {
         let b = self.color_from.b() + fraction * (self.color_to.b() - self.color_from.b());
         let a = self.color_from.a() + fraction * (self.color_to.a() - self.color_from.a());
 
-        data.color.set_r(r);
-        data.color.set_g(g);
-        data.color.set_b(b);
-        data.color.set_a(a);
+        data.color[0] = r;
+        data.color[1] = g;
+        data.color[2] = b;
+        data.color[3] = a;
+        //data.color.set_g(g);
+        //data.color.set_b(b);
+        //data.color.set_a(a);
     }
 }
 

@@ -21,7 +21,7 @@ impl Debug for dyn Animate {
 }
 
 pub struct AnimationData<'a, 'b, 'c> {
-    pub color: &'a mut Color,
+    pub color: &'a mut [f32; 4],
     pub scale: &'b mut Vec3,
     pub velocity: &'c mut Velocity,
 }

@@ -19,11 +19,11 @@ use crate::forces::accelerating_force::AcceleratingForce;
 use crate::forces::constant_force::ConstantForce;
 use crate::forces::force_handler::ForceHandler;
 use crate::forces::gravitational_force::GravitationalForce;
+use crate::forces::lerp_force::LerpForce;
 use crate::math::velocity;
 use crate::trails::trail_animation::TrailAnimation;
 use crate::trails::trail_animation::TrailOptions;
 use crate::trails::trail_handler::TrailHandler;
-use bevy::math::Vec3;
 use bevy::render::color::Color;
 use std::time::Duration;
 
@@ -361,15 +361,15 @@ pub fn random_forces() -> Option<ForceHandler> {
     //max_vz: 0.,
     //}));
 
-    force_handler.add(Box::new(AcceleratingForce {
+    force_handler.add(Box::new(LerpForce {
         from_ms: 2_000,
         until_ms: 3_000,
-        nx: 0.,
-        ny: 10.,
-        nz: 0.,
-        max_vx: 0.0,
-        max_vy: 50.,
-        max_vz: 0.,
+        min_nx: 0.,
+        min_ny: 2. / 50.,
+        min_nz: 0.,
+        max_nx: 0.0,
+        max_ny: 20. / 50.,
+        max_nz: 0.,
     }));
 
     //force_handler.add(Box::new(GravitationalForce {

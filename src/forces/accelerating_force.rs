@@ -1,11 +1,9 @@
 use super::force::{Force, ForceData};
-use bevy::prelude::Component;
 
 /**
  * Builds up applying force form 0 to nx/ny over time.
  * max_(vx/vy) will determin the max (positive or negative) speed a particle in similar direction needs to have the force applied.
  */
-#[derive(Debug, Component)]
 pub struct AcceleratingForce {
     pub nx: f32,
     pub ny: f32,

@@ -126,7 +126,7 @@ pub struct ParticleAttributes {
     pub radius: f32,
     pub mass: f32,
     pub friction_coefficient: f32,
-    pub color: Color,
+    pub color: [f32; 4],
 }
 
 #[derive(Component)]
@@ -186,7 +186,13 @@ fn apply_forces_system(
 
 fn apply_animations_system(
     mut particles_query: Query<
-        (&Parent, &mut Velocity, &mut Transform, &LifeCycle),
+        (
+            &Parent,
+            &mut Velocity,
+            &mut Transform,
+            &mut ParticleAttributes,
+            &LifeCycle,
+        ),
         With<Particle>,
     >,
     mut emitter_query: Query<&mut AnimationHandler, With<Emitter>>,
@@ -194,13 +200,14 @@ fn apply_animations_system(
 ) {
     let total_elapsed_ms = time.time_since_startup().as_millis();
 
-    for (parent, mut velocity, mut transform, life_cycle) in particles_query.iter_mut() {
+    for (parent, mut velocity, mut transform, mut attributes, life_cycle) in
+        particles_query.iter_mut()
+    {
         let mut animation_handler = emitter_query.get_mut(parent.0).unwrap();
-        //let material = &mut materials.get_mut(handle).unwrap();
 
-        let mut color = Color::rgba(0., 0., 0., 1.);
+        //println!("alpha: {}", attributes.color.a());
         let mut data = AnimationData {
-            color: &mut color,
+            color: &mut attributes.color,
             scale: &mut transform.scale,
             velocity: &mut velocity,
         };
@@ -368,7 +375,7 @@ fn spawn_particles(
                 friction_coefficient: particle_attributes.friction_coefficient,
                 radius: particle_attributes.radius,
                 mass: particle_attributes.mass,
-                color: particle_attributes.color,
+                color: particle_attributes.color.as_rgba_f32(),
             };
 
             particles.push((
