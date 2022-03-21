@@ -1,5 +1,6 @@
 use crate::emitters::emitter::Particle;
 use crate::emitters::emitter::ParticleAttributes;
+use bevy::utils::Instant;
 use bevy::{
     core_pipeline::Transparent3d,
     ecs::system::{lifetimeless::*, SystemParamItem},
@@ -33,6 +34,8 @@ struct InstanceData {
     color: [f32; 4],
 }
 
+struct Frame(i64);
+
 pub struct ShaderPlugin;
 
 impl Plugin for ShaderPlugin {
@@ -54,22 +57,14 @@ fn setup_shader(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         Visibility::default(),
         ComputedVisibility::default(),
     ));
-}
 
-impl ExtractComponent for InstanceMaterialData {
-    type Query = &'static InstanceMaterialData;
-    type Filter = ();
-
-    fn extract_component(item: bevy::ecs::query::QueryItem<Self::Query>) -> Self {
-        InstanceMaterialData(item.0.clone())
-    }
+    commands.insert_resource(Frame(0));
 }
 
 pub struct CustomMaterialPlugin;
 
 impl Plugin for CustomMaterialPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(ExtractComponentPlugin::<InstanceMaterialData>::default());
         app.sub_app_mut(RenderApp)
             .add_render_command::<Transparent3d, DrawCustom>()
             .init_resource::<CustomPipeline>()
@@ -81,11 +76,14 @@ impl Plugin for CustomMaterialPlugin {
 }
 
 fn prepare_particles(
-    mut instance_query: Query<&mut InstanceMaterialData>,
+    mut instance_query: Query<Entity, With<InstanceMaterialData>>,
     particle_query: Query<(&Transform, &ParticleAttributes), With<Particle>>,
+    mut previous_len: Local<usize>,
+    mut commands: Commands,
 ) {
-    let mut instances = Vec::new();
-    // TODO kijken of dit nog verbeterd kan worden, bijvoorbeeld de huidige array gebruiken.
+    let count = particle_query.iter().count();
+
+    let mut instances = Vec::with_capacity(count);
 
     for (transform, attributes) in particle_query.iter() {
         instances.push(InstanceData {
@@ -95,8 +93,12 @@ fn prepare_particles(
         });
     }
 
-    let mut instance_data = instance_query.single_mut();
-    instance_data.0 = instances;
+    let mut values = Vec::with_capacity(*previous_len);
+    let entity = instance_query.single_mut();
+    values.push((entity, (InstanceMaterialData(instances),)));
+    *previous_len = values.len();
+
+    commands.insert_or_spawn_batch(values);
 }
 
 fn queue_custom(
@@ -151,6 +153,7 @@ fn prepare_instance_buffers(
             contents: bytemuck::cast_slice(instance_data.0.as_slice()),
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
         });
+
         commands.entity(entity).insert(InstanceBuffer {
             buffer,
             length: instance_data.0.len(),
