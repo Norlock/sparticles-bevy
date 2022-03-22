@@ -1,6 +1,5 @@
 use crate::emitters::emitter::Particle;
 use crate::emitters::emitter::ParticleAttributes;
-use bevy::utils::Instant;
 use bevy::{
     core_pipeline::Transparent3d,
     ecs::system::{lifetimeless::*, SystemParamItem},
@@ -10,7 +9,6 @@ use bevy::{
     render::{
         mesh::GpuBufferInfo,
         render_asset::RenderAssets,
-        render_component::{ExtractComponent, ExtractComponentPlugin},
         render_phase::{
             AddRenderCommand, DrawFunctions, EntityRenderCommand, RenderCommandResult, RenderPhase,
             SetItemPipeline, TrackedRenderPass,

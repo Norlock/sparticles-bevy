@@ -385,6 +385,7 @@ fn spawn_particles(
                 attributes,
                 Particle,
                 Transform::from_xyz(x, y, z),
+                GlobalTransform::default(),
             ));
         }
 
